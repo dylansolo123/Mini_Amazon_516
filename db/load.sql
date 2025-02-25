@@ -1,16 +1,47 @@
-\COPY Users FROM 'Users.csv' WITH DELIMITER ',' NULL '' CSV
--- since id is auto-generated; we need the next command to adjust the counter
--- for auto-generation so next INSERT will not clash with ids loaded above:
-SELECT pg_catalog.setval('public.users_id_seq',
-                         (SELECT MAX(id)+1 FROM Users),
-                         false);
+-- Load Users
+\copy Users(email, full_name, address, password, balance, is_seller) FROM './data/users.csv' WITH CSV HEADER;
+SELECT setval('users_user_id_seq', (SELECT MAX(user_id) FROM Users));
 
-\COPY Products FROM 'Products.csv' WITH DELIMITER ',' NULL '' CSV
-SELECT pg_catalog.setval('public.products_id_seq',
-                         (SELECT MAX(id)+1 FROM Products),
-                         false);
+-- Load Product Categories
+\copy Product_Categories(category_name, description) FROM './data/product_categories.csv' WITH CSV HEADER;
+SELECT setval('product_categories_category_id_seq', (SELECT MAX(category_id) FROM Product_Categories));
 
-\COPY Purchases FROM 'Purchases.csv' WITH DELIMITER ',' NULL '' CSV
-SELECT pg_catalog.setval('public.purchases_id_seq',
-                         (SELECT MAX(id)+1 FROM Purchases),
-                         false);
+-- Load Products
+\copy Products(category_id, name, description, image_url, created_by) FROM './data/products.csv' WITH CSV HEADER;
+SELECT setval('products_product_id_seq', (SELECT MAX(product_id) FROM Products));
+
+-- Load Seller Inventory
+\copy Seller_Inventory(seller_id, product_id, price, quantity) FROM './data/seller_inventory.csv' WITH CSV HEADER;
+SELECT setval('seller_inventory_inventory_id_seq', (SELECT MAX(inventory_id) FROM Seller_Inventory));
+
+-- Load Carts
+\copy Carts(user_id) FROM './data/carts.csv' WITH CSV HEADER;
+SELECT setval('carts_cart_id_seq', (SELECT MAX(cart_id) FROM Carts));
+
+-- Load Cart Items
+\copy Cart_Items(cart_id, seller_id, product_id, quantity, unit_price) FROM './data/cart_items.csv' WITH CSV HEADER;
+SELECT setval('cart_items_cart_item_id_seq', (SELECT MAX(cart_item_id) FROM Cart_Items));
+
+-- Load Orders
+\copy Orders(buyer_id, total_amount, fulfillment_status) FROM './data/orders.csv' WITH CSV HEADER;
+SELECT setval('orders_order_id_seq', (SELECT MAX(order_id) FROM Orders));
+
+-- Load Order Items
+\copy Order_Items(order_id, seller_id, product_id, quantity, unit_price, fulfillment_status) FROM './data/order_items.csv' WITH CSV HEADER;
+SELECT setval('order_items_order_item_id_seq', (SELECT MAX(order_item_id) FROM Order_Items));
+
+-- Load Product Reviews
+\copy Product_Reviews(product_id, user_id, rating, review_text) FROM './data/product_reviews.csv' WITH CSV HEADER;
+SELECT setval('product_reviews_review_id_seq', (SELECT MAX(review_id) FROM Product_Reviews));
+
+-- Load Seller Reviews
+\copy Seller_Reviews(seller_id, user_id, rating, review_text) FROM './data/seller_reviews.csv' WITH CSV HEADER;
+SELECT setval('seller_reviews_review_id_seq', (SELECT MAX(review_id) FROM Seller_Reviews));
+
+-- Load Message Threads
+\copy Message_Threads(buyer_id, seller_id, order_id) FROM './data/message_threads.csv' WITH CSV HEADER;
+SELECT setval('message_threads_thread_id_seq', (SELECT MAX(thread_id) FROM Message_Threads));
+
+-- Load Messages
+\copy Messages(thread_id, sender_id, message_text) FROM './data/messages.csv' WITH CSV HEADER;
+SELECT setval('messages_message_id_seq', (SELECT MAX(message_id) FROM Messages));

@@ -1,0 +1,3 @@
+order_id,seller_id,product_id,quantity,unit_price,fulfillment_status
+1,1,1,1,699.99,pending
+2,1,2,1,999.99,completed

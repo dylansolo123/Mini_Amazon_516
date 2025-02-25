@@ -1,1 +1,3 @@
-0,icecream@tastes.good,pbkdf2:sha256:260000$1GvmeoAkcWb89TyU$5f711eafb243c1c1a884715dd9bd6d185f29ccd3dab59ad19cc201a7260091cb,Joey,Shmoey
+email,full_name,address,password,balance,is_seller
+john@example.com,John Doe,"123 Main St, City, ST 12345",hashed_password_1,1000.00,true
+jane@example.com,Jane Smith,"456 Oak Ave, Town, ST 12346",hashed_password_2,500.00,false

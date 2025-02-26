@@ -21,3 +21,6 @@ Kethan:
 
 Eddie
 1. page design flow for products 
+
+Aaron:
+1. synthesized all the information from the database and page design into a cohesive report

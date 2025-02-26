@@ -14,3 +14,10 @@ Dylan:
 1. created ERD diagram to visually show database schema
 2. Wrote code for create.sql and load.sql based on our collectively agreed upon schema
 3. Created .csv files for each table in our schema
+
+Kethan:
+1. Designed outline for the Sellers pages
+2. Looked over the Figma mockup and advocated for changes in the UX of sellers
+
+Eddie
+1. page design flow for products 

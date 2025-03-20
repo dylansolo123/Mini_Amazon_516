@@ -2,28 +2,39 @@ from flask import current_app as app
 
 
 class Product:
-    def __init__(self, id, name, price, available):
-        self.id = id
+    def __init__(self, product_id, category_id, name, description, image_url, created_by, created_at):
+        self.product_id = product_id
+        self.category_id = category_id
         self.name = name
-        self.price = price
-        self.available = available
+        self.description = description
+        self.image_url = image_url
+        self.created_by = created_by
+        self.created_at = created_at
 
     @staticmethod
-    def get(id):
+    def get(product_id):
         rows = app.db.execute('''
-SELECT id, name, price, available
+SELECT product_id, category_id, name, description, image_url, created_by, created_at
 FROM Products
-WHERE id = :id
+WHERE product_id = :product_id
 ''',
-                              id=id)
-        return Product(*(rows[0])) if rows is not None else None
+                              product_id=product_id)
+        return Product(*(rows[0])) if rows else None
 
     @staticmethod
-    def get_all(available=True):
-        rows = app.db.execute('''
-SELECT id, name, price, available
+    def get_all(category_id=None):
+        if category_id is not None:
+            rows = app.db.execute('''
+SELECT product_id, category_id, name, description, image_url, created_by, created_at
 FROM Products
-WHERE available = :available
+WHERE category_id = :category_id
+ORDER BY created_at DESC
 ''',
-                              available=available)
+                                category_id=category_id)
+        else:
+            rows = app.db.execute('''
+SELECT product_id, category_id, name, description, image_url, created_by, created_at
+FROM Products
+ORDER BY created_at DESC
+''')
         return [Product(*row) for row in rows]

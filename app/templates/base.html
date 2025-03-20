@@ -6,61 +6,207 @@
   <script src="//code.jquery.com/jquery-1.11.1.min.js"></script>
   <link href="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
   <script src="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/example.css') }}">
   <style>
     body {
         font-family: "Lato", sans-serif;
-    }
-
-    .main-head {
-        height: 150px;
-        background: #FFF;
-    }
-
-    .sidenav {
-        height: 100%;
-        background-color: #000;
-        overflow-x: hidden;
-        padding-top: 20px;
+        padding-top: 56px; /* Height of navbar */
+        min-height: 100vh;
+        background-color: #f5f5f5;
     }
 
     .main {
-        padding: 0px 10px;
-    }
-
-    .login-main-text {
-        margin-top: 20%;
-        padding: 60px;
-        color: #fff;
-    }
-
-    .login-main-text h2 {
-        font-weight: 300;
+        padding: 20px;
+        width: 100%;
     }
 
     .btn-black {
         background-color: #000 !important;
         color: #fff;
     }
+
+    /* Navigation bar styles */
+    .navbar {
+        background-color: #563d7c; /* Purple color scheme */
+        position: fixed;
+        top: 0;
+        width: 100%;
+        z-index: 1000;
+    }
+    
+    .navbar-brand {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #fff !important;
+    }
+    
+    .navbar .nav-link {
+        color: #fff !important;
+        margin: 0 5px;
+    }
+    
+    .navbar .nav-link:hover {
+        color: #84ccc9 !important; /* Teal accent */
+    }
+    
+    .navbar-toggler {
+        border-color: #fff;
+    }
+
+    /* Cart button */
+    .cart-button {
+        position: relative;
+        padding-right: 8px;
+    }
+    
+    .cart-count {
+        position: absolute;
+        top: -8px;
+        right: 0;
+        background-color: #84ccc9; /* Teal accent */
+        color: #563d7c;
+        border-radius: 50%;
+        width: 18px;
+        height: 18px;
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Search bar */
+    .search-form {
+        flex-grow: 1;
+        max-width: 500px;
+    }
+    
+    .search-input {
+        border-radius: 4px 0 0 4px !important;
+        border-right: none;
+    }
+    
+    .search-button {
+        background-color: #84ccc9; /* Teal accent */
+        color: #563d7c;
+        border-color: #84ccc9;
+        border-radius: 0 4px 4px 0 !important;
+    }
+    
+    .search-button:hover {
+        background-color: #6bafad; /* Darker teal */
+        border-color: #6bafad;
+    }
+    
+    /* User dropdown */
+    .user-dropdown .dropdown-menu {
+        background-color: #fff;
+        margin-top: 8px;
+    }
+    
+    .user-dropdown .dropdown-item {
+        color: #563d7c;
+    }
+    
+    .user-dropdown .dropdown-item:hover {
+        background-color: #f0ebf7; /* Light purple */
+        color: #563d7c;
+    }
+    
+    /* Table styles */
+    .table {
+        background-color: #fff;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .thead-dark {
+        background-color: #563d7c;
+        color: #fff;
+    }
+
+    /* Button styles */
+    .btn-outline-light:hover {
+        color: #563d7c !important;
+    }
   </style>
 </head>
 
 <body>
-  <div class="sidenav">
-    {% block msg %}
-      <h1 style="color:aliceblue">Welcome to CompSci 316 Mini Amazon!</h1>
-      <div style="color: aliceblue; text-align: right; margin-bottom: 25px">
-        {% if current_user.is_authenticated %}
-          Hello {{current_user.firstname}}! <a href="{{ url_for('users.logout') }}" type="button" class="btn btn-light">Log out</a>
-        {% else %}
-          <a href="{{ url_for('users.login') }}" type="button" class="btn btn-light">Log in</a>
-        {% endif %}
+  <!-- Navigation Bar -->
+  <nav class="navbar navbar-expand-lg navbar-dark">
+    <div class="container">
+      <a class="navbar-brand" href="{{ url_for('index.index') }}">Mini Amazon</a>
+      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav mr-auto">
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('index.index') }}">Home</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('index.index') }}">Products</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#">Categories</a>
+          </li>
+        </ul>
+        
+        <!-- Search bar -->
+        <form class="form-inline my-2 my-lg-0 search-form mx-auto">
+          <div class="input-group">
+            <input class="form-control search-input" type="search" placeholder="Search products..." aria-label="Search">
+            <div class="input-group-append">
+              <button class="btn search-button" type="submit">
+                <i class="fas fa-search"></i>
+              </button>
+            </div>
+          </div>
+        </form>
+        
+        <ul class="navbar-nav ml-auto">
+          <!-- Shopping Cart -->
+          <li class="nav-item">
+            <a class="nav-link cart-button" href="#">
+              <i class="fas fa-shopping-cart"></i>
+              <span class="cart-count">0</span>
+            </a>
+          </li>
+          
+          {% if current_user.is_authenticated %}
+          <!-- User Account Dropdown -->
+          <li class="nav-item dropdown user-dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+              Hello, {{ current_user.firstname }}
+            </a>
+            <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdown">
+              <a class="dropdown-item" href="#">My Account</a>
+              <a class="dropdown-item" href="#">My Orders</a>
+              <a class="dropdown-item" href="#">My Wishlist</a>
+              <div class="dropdown-divider"></div>
+              <a class="dropdown-item" href="{{ url_for('users.logout') }}">Log out</a>
+            </div>
+          </li>
+          {% else %}
+          <!-- Login/Register -->
+          <li class="nav-item">
+            <a class="nav-link btn btn-outline-light btn-sm mr-2" href="{{ url_for('users.login') }}">Log in</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link btn btn-outline-light btn-sm" href="{{ url_for('users.register') }}">Register</a>
+          </li>
+          {% endif %}
+        </ul>
       </div>
-    {% endblock %}
-  </div>
-  <div class="main">
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="container main">
     {% block content %}{% endblock %}
-  </div>
+  </main>
+
 </body>
 
 </html>

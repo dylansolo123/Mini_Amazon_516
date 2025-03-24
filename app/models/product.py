@@ -25,6 +25,7 @@ WHERE product_id = :id
 
     @staticmethod
     def get_all(available=True):
+        print("get_all")
         rows = app.db.execute('''
 SELECT product_id, category_id, name, description, image_url, created_by, created_at
 FROM Products

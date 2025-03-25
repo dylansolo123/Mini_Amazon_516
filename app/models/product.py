@@ -30,4 +30,5 @@ WHERE product_id = :id
 SELECT product_id, category_id, name, description, image_url, created_by, created_at
 FROM Products
 ''')
+        print(rows)
         return [Product(*row) for row in rows]

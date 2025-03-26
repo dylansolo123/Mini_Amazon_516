@@ -87,3 +87,33 @@ RETURNING balance
             self.balance = rows[0][0]
             return True
         return False
+
+    def get_seller_inventory(self):
+        """
+        Retrieves all products in the seller's inventory.
+        
+        Returns:
+        A list of dictionaries, each containing product details:
+        - product_id: Unique identifier for the product
+        - product_name: Name of the product
+        - price: Price of the product in seller's inventory
+        - quantity: Quantity of the product in seller's inventory
+        """
+        if not self.is_seller:
+            return []
+        
+        rows = app.db.execute("""
+        SELECT p.product_id, p.name AS product_name, si.price, si.quantity
+        FROM Seller_Inventory si
+        JOIN Products p ON si.product_id = p.product_id
+        WHERE si.seller_id = :seller_id
+        """, seller_id=self.user_id)
+        
+        return [
+            {
+                'product_id': row[0],
+                'product_name': row[1],
+                'price': row[2],
+                'quantity': row[3]
+            } for row in rows
+        ]

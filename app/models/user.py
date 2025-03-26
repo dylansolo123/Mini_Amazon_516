@@ -43,7 +43,7 @@ WHERE email = :email
         return len(rows) > 0
 
     @staticmethod
-    def register(email, password, full_name, address, is_seller=False):
+    def register(email, password, full_name, address, is_seller=True):
         try:
             rows = app.db.execute("""
 INSERT INTO Users(email, password, full_name, address, balance, is_seller)
@@ -51,7 +51,7 @@ VALUES(:email, :password, :full_name, :address, 0.00, :is_seller)
 RETURNING user_id
 """,
                                   email=email,
-                                  password=generate_password_hash(password),
+                                  password=password,
                                   full_name=full_name,
                                   address=address,
                                   is_seller=is_seller)

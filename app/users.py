@@ -25,6 +25,7 @@ def login():
         return redirect(url_for('index.index'))
     form = LoginForm()
     if form.validate_on_submit():
+        print(form.email.data, form.password.data)
         user = User.get_by_auth(form.email.data, form.password.data)
         if user is None:
             flash('Invalid email or password')

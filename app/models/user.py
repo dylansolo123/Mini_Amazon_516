@@ -19,10 +19,11 @@ class User(UserMixin):
     def get_by_auth(email, password):
         rows = app.db.execute("""
 SELECT user_id, email, full_name, address, balance, is_seller, password
-FROM Users
+FROM users
 WHERE email = :email
 """,
                               email=email)
+        print(rows)
         if not rows:  # email not found
             return None
         elif not check_password_hash(rows[0][6], password):

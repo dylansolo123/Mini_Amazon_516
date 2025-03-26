@@ -30,17 +30,19 @@
 <table class='table table-hover table-bordered container'>
   <thead class="thead-dark">
     <tr>
-      <th scope="col">Purchase ID</th>
-      <th scope="col">Product Name</th>
-      <th scope="col">Price</th>
+      <th scope="col">Order ID</th>
+      <th scope="col">Order Date</th>
+      <th scope="col">Total Amount</th>
+      <th scope="col">Status</th>
     </tr>
   </thead>
   <tbody>
     {% for purchase in purchase_history%}
       <tr>
-        <th scope="row">{{purchase.id}}</th>
-        <td>{{purchase.pid}}</td>
-        <td>{{purchase.time_purchased}}</td>
+        <th scope="row">{{purchase.order_id}}</th>
+        <td>{{purchase.order_date}}</td>
+        <td>${{ "%.2f"|format(purchase.total_amount) }}</td>
+        <td>{{purchase.fulfillment_status}}</td>
       </tr>
     {% endfor %}
   </tbody>

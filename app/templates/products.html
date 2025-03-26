@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<br><br>
+
+<div class="container mb-4">
+    <form class="form-inline" method="GET">
+        <div class="input-group mr-3">
+            <input type="number" class="form-control" name="k" 
+                   value="{{ request.args.get('k', '') }}" 
+                   placeholder="Show top N most expensive products" min="1">
+            <div class="input-group-append">
+                <button class="btn btn-primary" type="submit">Filter</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<h2>Products:</h2>
+<table class='table table-hover table-bordered container'>
+  <thead class="thead-dark">
+    <tr>
+      <th scope="col">Product ID</th>
+      <th scope="col">Product Name</th>
+      <th scope="col">Price</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for product in avail_products %}
+      <tr>
+        <th scope="row">{{product.id}}</th>
+        <td>{{product.name}}</td>
+        <td>{% if product.price %}${{ "%.2f"|format(product.price) }}{% else %}Not Available{% endif %}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% endblock %}

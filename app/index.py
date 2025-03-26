@@ -1,4 +1,4 @@
-from flask import render_template
+from flask import render_template, request
 from flask_login import current_user
 import datetime
 
@@ -23,3 +23,15 @@ def index():
     return render_template('index.html',
                            avail_products=products,
                            purchase_history=purchases)
+
+@bp.route('/products')
+def products():
+    k = request.args.get('k', type=int)
+    
+    if k and k > 0:
+        products = Product.get_top_k_expensive(k)
+    else:
+        products = Product.get_all()
+
+    return render_template('products.html',
+                         avail_products=products)

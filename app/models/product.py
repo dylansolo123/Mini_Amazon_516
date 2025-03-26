@@ -76,3 +76,30 @@ ORDER BY p.product_id
             product.available_quantity = row[8]  # Set seller's quantity
             products.append(product)
         return products
+
+    @staticmethod
+    def get_top_k_expensive(k):
+        rows = app.db.execute('''
+        SELECT p.product_id, p.category_id, p.name, p.description, 
+            p.image_url, p.created_by, p.created_at,
+            MIN(si.price) as min_price,
+            SUM(si.quantity) as total_quantity
+        FROM Products p
+        LEFT JOIN Seller_Inventory si ON p.product_id = si.product_id
+        GROUP BY p.product_id, p.category_id, p.name, p.description, 
+                p.image_url, p.created_by, p.created_at
+        HAVING MIN(si.price) IS NOT NULL  -- Only show products with prices
+        AND SUM(si.quantity) > 0          -- Only show products with stock
+        ORDER BY min_price DESC
+        LIMIT :k
+        ''', k=k)
+        
+        products = []
+        for row in rows:
+            product = Product(*(row[:7]))
+            product.price = row[7]
+            product.available_quantity = row[8] or 0
+            products.append(product)
+        return products
+
+    

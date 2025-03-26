@@ -30,7 +30,13 @@ ORDER BY order_date DESC
 ''',
                               buyer_id=buyer_id,
                               since=since)
+        print(rows)
         return [Purchase(*row) for row in rows]
+
+    @staticmethod
+    def get_all_by_uid_since(uid, since):
+        """Alias for get_all_by_buyer_since for compatibility with index.py"""
+        return Purchase.get_all_by_buyer_since(uid, since)
 
     @staticmethod
     def get_items(order_id):

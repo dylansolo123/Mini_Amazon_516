@@ -1,6 +1,6 @@
 from flask import render_template, redirect, url_for, flash, request
 from werkzeug.urls import url_parse
-from flask_login import login_user, logout_user, current_user
+from flask_login import login_user, logout_user, current_user, login_required
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, SubmitField
 from wtforms.validators import ValidationError, DataRequired, Email, EqualTo
@@ -74,3 +74,13 @@ def register():
 def logout():
     logout_user()
     return redirect(url_for('index.index'))
+
+@bp.route('/sales')
+@login_required
+def sales():
+    if not current_user.is_seller:
+        flash('Access denied: You must be a seller to view this page.', 'danger')
+        return redirect(url_for('index.index'))
+
+    inventory_items = []
+    return render_template('sales.html', title='Sales', inventory_items=inventory_items)

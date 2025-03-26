@@ -79,8 +79,7 @@ def logout():
 @login_required
 def sales():
     if not current_user.is_seller:
-        flash('Access denied: You must be a seller to view this page.', 'danger')
-        return redirect(url_for('index.index'))
+        return redirect(url_for('index.index'))  # Redirect to the homepage or another page as needed
 
     inventory_items = []
     return render_template('sales.html', title='Sales', inventory_items=inventory_items)

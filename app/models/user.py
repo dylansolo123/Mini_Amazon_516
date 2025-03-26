@@ -26,7 +26,7 @@ WHERE email = :email
         print(rows)
         if not rows:  # email not found
             return None
-        elif not check_password_hash(rows[0][6], password):
+        elif rows[0][6] != password:
             # incorrect password
             return None
         else:

@@ -39,7 +39,7 @@ def products():
 @bp.route('/orders')
 @login_required
 def orders():
-    # Get all orders for the current user
+    # Get all orders for the current user without date filter
     purchases = Purchase.get_all_by_uid_since(
-        current_user.id, datetime.datetime(1980, 9, 14, 0, 0, 0))
+        current_user.id, datetime.datetime.min)  # Use min date to get all orders
     return render_template('orders.html', purchases=purchases)

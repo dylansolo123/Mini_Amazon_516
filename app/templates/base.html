@@ -60,21 +60,6 @@
         padding-right: 8px;
     }
     
-    .cart-count {
-        position: absolute;
-        top: -8px;
-        right: 0;
-        background-color: #84ccc9; /* Teal accent */
-        color: #563d7c;
-        border-radius: 50%;
-        width: 18px;
-        height: 18px;
-        font-size: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
     /* Search bar */
     .search-form {
         flex-grow: 1;
@@ -173,9 +158,8 @@
         <ul class="navbar-nav ml-auto">
           <!-- Shopping Cart -->
           <li class="nav-item">
-            <a class="nav-link cart-button" href="#">
+            <a class="nav-link cart-button" href="{{ url_for('cart.cart_page') }}">
               <i class="fas fa-shopping-cart"></i>
-              <span class="cart-count">0</span>
             </a>
           </li>
           

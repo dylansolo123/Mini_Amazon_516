@@ -24,6 +24,8 @@
       <th scope="col">Product ID</th>
       <th scope="col">Product Name</th>
       <th scope="col">Price</th>
+      <th scope="col">Seller</th>
+      <th scope="col">Actions</th>
     </tr>
   </thead>
   <tbody>
@@ -32,6 +34,23 @@
         <th scope="row">{{product.id}}</th>
         <td>{{product.name}}</td>
         <td>{% if product.price %}${{ "%.2f"|format(product.price) }}{% else %}Not Available{% endif %}</td>
+        <td>{{ product.seller_name }}</td>
+        <td>
+          {% if product.price and product.seller_id %}
+            <form action="{{ url_for('cart.add_to_cart') }}" method="post">
+              <input type="hidden" name="product_id" value="{{ product.id }}">
+              <input type="hidden" name="seller_id" value="{{ product.seller_id }}">
+              <div class="input-group">
+                <input type="number" name="quantity" value="1" min="1" max="10" class="form-control form-control-sm" style="width: 60px;">
+                <div class="input-group-append">
+                  <button type="submit" class="btn btn-sm btn-success">Add to Cart</button>
+                </div>
+              </div>
+            </form>
+          {% else %}
+            <span class="badge badge-secondary">Not Available</span>
+          {% endif %}
+        </td>
       </tr>
     {% endfor %}
   </tbody>

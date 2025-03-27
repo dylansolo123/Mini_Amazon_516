@@ -91,13 +91,6 @@ RETURNING balance
     def get_seller_inventory(self):
         """
         Retrieves all products in the seller's inventory.
-        
-        Returns:
-        A list of dictionaries, each containing product details:
-        - product_id: Unique identifier for the product
-        - product_name: Name of the product
-        - price: Price of the product in seller's inventory
-        - quantity: Quantity of the product in seller's inventory
         """
         if not self.is_seller:
             return []

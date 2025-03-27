@@ -1,5 +1,5 @@
 from flask import render_template, request
-from flask_login import current_user
+from flask_login import current_user, login_required
 import datetime
 
 from .models.product import Product
@@ -35,3 +35,11 @@ def products():
 
     return render_template('products.html',
                          avail_products=products)
+
+@bp.route('/orders')
+@login_required
+def orders():
+    # Get all orders for the current user
+    purchases = Purchase.get_all_by_uid_since(
+        current_user.id, datetime.datetime(1980, 9, 14, 0, 0, 0))
+    return render_template('orders.html', purchases=purchases)

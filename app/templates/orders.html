@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Your Order History</h2>
+<table class='table table-hover table-bordered container'>
+  <thead class="thead-dark">
+    <tr>
+      <th scope="col">Order ID</th>
+      <th scope="col">Order Date</th>
+      <th scope="col">Total Amount</th>
+      <th scope="col">Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for purchase in purchases %}
+      <tr>
+        <th scope="row">{{purchase.order_id}}</th>
+        <td>{{purchase.order_date}}</td>
+        <td>${{ "%.2f"|format(purchase.total_amount) }}</td>
+        <td>{{purchase.fulfillment_status}}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if not purchases %}
+<p>You haven't made any purchases yet.</p>
+{% endif %}
+{% endblock %} 

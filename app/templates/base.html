@@ -171,7 +171,7 @@
             </a>
             <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdown">
               <a class="dropdown-item" href="/my-account">My Account</a>
-              <a class="dropdown-item" href="#">My Orders</a>
+              <a class="dropdown-item" href="{{ url_for('index.orders') }}">My Orders</a>
               <a class="dropdown-item" href="#">My Wishlist</a>
               <div class="dropdown-divider"></div>
               <a class="dropdown-item" href="{{ url_for('users.logout') }}">Log out</a>

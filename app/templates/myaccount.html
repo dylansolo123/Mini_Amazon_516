@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <div class="container mt-5">
+    <h1>My Account</h1>
+
+    <h2>Find User Reviews</h2>
+    <form method="POST">
+      {{ form.hidden_tag() }}
+      <div class="form-group">
+        {{ form.user_id.label(class="form-label") }}
+        {{ form.user_id(class="form-control") }}
+        {% if form.user_id.errors %}
+          {% for error in form.user_id.errors %}
+            <span class="text-danger">{{ error }}</span>
+          {% endfor %}
+        {% endif %}
+      </div>
+      {{ form.submit(class="btn btn-primary") }}
+    </form>
+
+    {% if user_reviews %}
+    <h2>Reviews for User ID {{ searched_user_id }}</h2>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Product ID</th>
+          <th>Rating</th>
+          <th>Review Text</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for review in user_reviews %}
+        <tr>
+          <td>{{ review.product_id }}</td>
+          <td>{{ review.rating }}</td>
+          <td>{{ review.review_text }}</td>
+          <td>{{ review.date }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <p>No reviews found for User ID {{ searched_user_id }}.</p>
+    {% endif %}
+
+    <div class="row">
+      <div class="col-md-6">
+        <h2>Profile Information</h2>
+        <p><strong>Full Name:</strong> {{ user.full_name }}</p>
+        <p><strong>Email:</strong> {{ user.email }}</p>
+        <p><strong>Address:</strong> {{ user.address }}</p>
+        <a href="#" class="btn btn-primary">Edit Profile</a>
+      </div>
+      <div class="col-md-6">
+        <h2>Account Actions</h2>
+        <ul>
+          <li><a href="#">View Order History</a></li>
+          <li><a href="#">Manage Wishlist</a></li>
+          <li><a href="#">Change Password</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <h2>Recent Orders</h2>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Order ID</th>
+          <th>Order Date</th>
+          <th>Total Amount</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>12345</td>
+          <td>2025-03-26</td>
+          <td>$75.00</td>
+          <td>Shipped</td>
+        </tr>
+      </tbody>
+    </table>
+
+  </div>
+{% endblock %}

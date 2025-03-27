@@ -73,7 +73,7 @@ def logout():
 @login_required
 def sales():
     if not current_user.is_seller:
-        return redirect(url_for('index.index'))  # Redirect to the homepage or another page as needed
+        return redirect(url_for('index.index')) 
     inventory_items = current_user.get_seller_inventory()
     return render_template('seller_products.html', inventory_items=inventory_items)
 

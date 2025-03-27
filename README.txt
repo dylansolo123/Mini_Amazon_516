@@ -27,7 +27,7 @@ Aaron:
 
 Milestone 3: 
 
-Sellers Guru:
+Ciaran - Sellers Guru:
   app/models/user.py - the query to get the information for the sellers’ products
   
   app/templates/base.html + app/templates/sales.html - addition to navbars with sales included

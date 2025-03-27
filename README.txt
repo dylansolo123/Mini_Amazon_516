@@ -35,3 +35,10 @@ Ciaran - Sellers Guru:
   app/templates/seller_products.html - using the template table put in all our information regarding products for sale
   
   app/users.py - routing for the sales tab; only available when both logged in and a seller
+
+Eddie - Carts Guru:
+File	Description
+app/models/cart.py - New Cart model with methods for cart item management
+app/cart.py	- New Blueprint and routes for cart operations
+app/init.py	- Integration of the new cart Blueprint
+app/models/product.py - Updates to include seller information in product queries

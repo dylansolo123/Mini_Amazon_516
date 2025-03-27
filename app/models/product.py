@@ -12,6 +12,8 @@ class Product:
         self.created_at = created_at
         self.price = None  # Will be set from Seller_Inventory
         self.available_quantity = 0
+        self.seller_id = None
+        self.seller_name = None
 
     @staticmethod
     def get(id):
@@ -41,11 +43,16 @@ GROUP BY p.product_id, p.category_id, p.name, p.description,
 SELECT p.product_id, p.category_id, p.name, p.description, 
        p.image_url, p.created_by, p.created_at,
        MIN(si.price) as min_price,
-       SUM(si.quantity) as total_quantity
+       SUM(si.quantity) as total_quantity,
+       si.seller_id,
+       u.full_name as seller_name
 FROM Products p
-LEFT JOIN Seller_Inventory si ON p.product_id = si.product_id
+LEFT JOIN Seller_Inventory si ON p.product_id = si.product_id AND si.price = (
+    SELECT MIN(price) FROM Seller_Inventory WHERE product_id = p.product_id
+)
+LEFT JOIN Users u ON si.seller_id = u.user_id
 GROUP BY p.product_id, p.category_id, p.name, p.description, 
-         p.image_url, p.created_by, p.created_at
+         p.image_url, p.created_by, p.created_at, si.seller_id, u.full_name
 ORDER BY p.product_id
 ''')
         products = []
@@ -53,6 +60,8 @@ ORDER BY p.product_id
             product = Product(*(row[:7]))  # First 7 columns are product info
             product.price = row[7]  # Set the minimum price
             product.available_quantity = row[8] or 0  # Set total available quantity
+            product.seller_id = row[9]  # Set the seller ID
+            product.seller_name = row[10]  # Set the seller name
             products.append(product)
         return products
 
@@ -83,11 +92,16 @@ ORDER BY p.product_id
         SELECT p.product_id, p.category_id, p.name, p.description, 
             p.image_url, p.created_by, p.created_at,
             MIN(si.price) as min_price,
-            SUM(si.quantity) as total_quantity
+            SUM(si.quantity) as total_quantity,
+            si.seller_id,
+            u.full_name as seller_name
         FROM Products p
-        LEFT JOIN Seller_Inventory si ON p.product_id = si.product_id
+        LEFT JOIN Seller_Inventory si ON p.product_id = si.product_id AND si.price = (
+            SELECT MIN(price) FROM Seller_Inventory WHERE product_id = p.product_id
+        )
+        LEFT JOIN Users u ON si.seller_id = u.user_id
         GROUP BY p.product_id, p.category_id, p.name, p.description, 
-                p.image_url, p.created_by, p.created_at
+                p.image_url, p.created_by, p.created_at, si.seller_id, u.full_name
         HAVING MIN(si.price) IS NOT NULL  -- Only show products with prices
         AND SUM(si.quantity) > 0          -- Only show products with stock
         ORDER BY min_price DESC
@@ -99,6 +113,8 @@ ORDER BY p.product_id
             product = Product(*(row[:7]))
             product.price = row[7]
             product.available_quantity = row[8] or 0
+            product.seller_id = row[9]  # Set the seller ID
+            product.seller_name = row[10]  # Set the seller name
             products.append(product)
         return products
 

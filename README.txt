@@ -51,3 +51,6 @@ app/models/product.py - Created the get_top_k_expensive(k) SQL query method that
 app/templates/products.html- Made a HTML template that accepts a number input 'k' and shows the filtered products in a table format with their IDs, names, prices, seller information, and "Add to Cart" buttons.
 db/generated/gen.py - Augmented the gen.py file to create generated data for our new CSV files/data schema
 
+Kethan - Users Guru:
+Modified base.html (nav bar) to link to my orders drop down to order.html. 
+Created and orders route in index.py to get all orders by a user.

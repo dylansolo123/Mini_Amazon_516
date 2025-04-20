@@ -1,9 +1,9 @@
 Milestone 2:
 
-Ciaran: Users Guru: responsible for Account / Purchases
-Eddie: Products Guru: responsible for Products
-Dylan: Carts Guru: responsible for Cart / Order
-Kethan: Sellers Guru: responsible for Inventory / Order Fulfillment
+Kethan: Users Guru: responsible for Account / Purchases
+Dylan: Products Guru: responsible for Products
+Eddie: Carts Guru: responsible for Cart / Order
+Ciara: Sellers Guru: responsible for Inventory / Order Fulfillment
 Aaron: Social Guru: responsible for Feedback / Messaging
 
 Ciaran
@@ -42,3 +42,15 @@ app/models/cart.py - New Cart model with methods for cart item management
 app/cart.py	- New Blueprint and routes for cart operations
 app/init.py	- Integration of the new cart Blueprint
 app/models/product.py - Updates to include seller information in product queries
+
+
+Dylan - Products Guru:
+
+app/templates/index.html - Changed Nav bar for products to point to actual products page
+app/models/product.py - Created the get_top_k_expensive(k) SQL query method that joins Products with Seller_Inventory and Users tables, groups by product details, filters for products with prices and stock, orders by price in descending order, and limits the results to k products.
+app/templates/products.html- Made a HTML template that accepts a number input 'k' and shows the filtered products in a table format with their IDs, names, prices, seller information, and "Add to Cart" buttons.
+db/generated/gen.py - Augmented the gen.py file to create generated data for our new CSV files/data schema
+
+Kethan - Users Guru:
+Modified base.html (nav bar) to link to my orders drop down to order.html. 
+Created and orders route in index.py to get all orders by a user.

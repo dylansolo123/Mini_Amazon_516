@@ -1,0 +1,83 @@
+{% extends "base.html" %} {% block content %}
+
+<h2>Checkout</h2>
+{# Can only be clicked if items part, no need to check if cart has items #}
+<div>
+  <div>
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th>Product</th>
+          <th>Seller</th>
+          <th>Price</th>
+          <th>Quantity</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in cart_items%}
+        <tr class="cart-item">
+          <td>
+            <div class="d-flex align-items-center">
+              {% if item.image_url %}
+              <img
+                src="{{ item.image_url }}"
+                alt="{{ item.product_name }}"
+                class="mr-3"
+                style="width: 50px; height: 50px; object-fit: cover"
+              />
+              {% else %}
+              <div
+                class="mr-3"
+                style="
+                  width: 50px;
+                  height: 50px;
+                  background-color: #f0f0f0;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                "
+              >
+                <i class="fas fa-image text-muted"></i>
+              </div>
+              {% endif %}
+              <div>
+                <h6 class="mb-0">{{ item.product_name }}</h6>
+                <small class="text-muted"
+                  >Product ID: {{ item.product_id }}</small
+                >
+              </div>
+            </div>
+          </td>
+          <td>{{item.seller_name}}</td>
+          <td>${{ "%.2f"|format(item.unit_price) }}</td>
+          <td>{{ item.quantity }}</td>
+          <td>${{ "%.2f"|format(item.total_price) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="4" class="text-right"><strong>Grand Total:</strong></td>
+          <td>${{ "%.2f"|format(total) }}</td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <div>
+    <a
+      href="{{ url_for('index.products') }}"
+      class="btn btn-outline-secondary mr-2"
+      >Continue Shopping</a
+    >
+    <a
+      href="{{ url_for('cart.cart_page') }}"
+      class="btn btn-outline-secondary mr-2"
+      >Back to Cart</a
+    >
+    <a href="">Submit Payment</a>
+  </div>
+</div>
+{% endblock %}

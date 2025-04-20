@@ -1,4 +1,4 @@
-from flask import render_template, redirect, url_for, flash, request, Blueprint, session
+from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_required
 
 from .models.cart import Cart
@@ -97,10 +97,23 @@ def clear_cart():
     Clear all items from the cart
     """
     success = Cart.clear_cart(current_user.id)
-    
+
     if success:
         flash('Cart cleared', 'success')
     else:
         flash('Failed to clear cart', 'danger')
-    
+
     return redirect(url_for('cart.cart_page')) 
+
+
+@cart_bp.route("/checkout", methods=["GET", "POST"])
+@login_required
+def checkout():
+    """Checkout items from cart"""
+    cart_items = Cart.get_cart_items(current_user.id)
+    total = sum(item["total_price"] for item in cart_items)
+    item_count = Cart.get_cart_count(current_user.id)
+
+    return render_template(
+        "checkout.html", cart_items=cart_items, total=total, item_count=item_count
+    )

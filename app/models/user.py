@@ -21,16 +21,18 @@ class User(UserMixin):
     def get_by_auth(email, password):
         rows = app.db.execute("""
 SELECT user_id, email, full_name, address, balance, is_seller, password
-FROM Users
+FROM users
 WHERE email = :email
 """,
                               email=email)
-        if not rows:
+        print(rows)
+        if not rows:  # email not found
             return None
-        elif not check_password_hash(rows[0][6], password):
+        elif rows[0][6] != password:
+            # incorrect password
             return None
         else:
-            return User(*(rows[0][:-1]))
+            return User(*(rows[0][:-1]))  # Exclude password from User object
 
     @staticmethod
     def email_exists(email):
@@ -51,15 +53,18 @@ VALUES(:email, :password, :full_name, :address, 0.00, :is_seller)
 RETURNING user_id
 """,
                                   email=email,
-                                  password=generate_password_hash(password),
+                                  password=password,
                                   full_name=full_name,
                                   address=address,
                                   is_seller=is_seller)
             user_id = rows[0][0]
             return User.get(user_id)
         except Exception as e:
+            # likely email already in use; better error checking and reporting needed;
+            # the following simply prints the error to the console:
             print(str(e))
             return None
+
 
     @staticmethod
     @login.user_loader

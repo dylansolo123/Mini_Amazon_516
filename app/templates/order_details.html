@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1>Order Details</h1>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2>Order Summary</h2>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Order ID:</strong> {{ order.order_id }}</p>
+                    <p><strong>Total Amount:</strong> ${{ "%.2f"|format(order.total_amount) }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Status:</strong> {{ order.fulfillment_status }}</p>
+                    <a href="{{ url_for('users.my_account') }}" class="btn btn-secondary">Back to My Account</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2>Order Items</h2>
+        </div>
+        <div class="card-body">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Product ID</th>
+                        <th>Order ID</th>
+                        <th>Quantity</th>
+                        <th>Unit Price</th>
+                        <th>Total</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td>{{ item[3] }}</td>
+                        <td>{{ item[1] }}</td> 
+                        <td>{{ item[4] }}</td> 
+                        <td>${{ "%.2f"|format(item[5]) }}</td> 
+                        <td>${{ "%.2f"|format(item[4] * item[5]) }}</td>
+                        <td>{{ item[6] }}</td> 
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

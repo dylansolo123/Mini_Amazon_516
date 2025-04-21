@@ -1,13 +1,15 @@
 from flask_login import UserMixin
 from flask import current_app as app
 from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime, timedelta
+from .purchase import Purchase
 
 from .. import login
 
 
 class User(UserMixin):
     def __init__(self, user_id, email, full_name, address, balance, is_seller):
-        self.id = user_id  # Keep as self.id for Flask-Login compatibility
+        self.id = user_id
         self.user_id = user_id
         self.email = email
         self.full_name = full_name
@@ -19,18 +21,16 @@ class User(UserMixin):
     def get_by_auth(email, password):
         rows = app.db.execute("""
 SELECT user_id, email, full_name, address, balance, is_seller, password
-FROM users
+FROM Users
 WHERE email = :email
 """,
                               email=email)
-        print(rows)
-        if not rows:  # email not found
+        if not rows:
             return None
-        elif rows[0][6] != password:
-            # incorrect password
+        elif not check_password_hash(rows[0][6], password):
             return None
         else:
-            return User(*(rows[0][:-1]))  # Exclude password from User object
+            return User(*(rows[0][:-1]))
 
     @staticmethod
     def email_exists(email):
@@ -58,8 +58,6 @@ RETURNING user_id
             user_id = rows[0][0]
             return User.get(user_id)
         except Exception as e:
-            # likely email already in use; better error checking and reporting needed;
-            # the following simply prints the error to the console:
             print(str(e))
             return None
 
@@ -74,19 +72,112 @@ WHERE user_id = :user_id
                               user_id=user_id)
         return User(*(rows[0])) if rows else None
 
-    def update_balance(self, new_balance):
-        rows = app.db.execute("""
+    def update_balance(self, amount, action='add'):
+        try:
+            amount = float(amount)
+            if action == 'add':
+                new_balance = float(self.balance) + amount
+            elif action == 'withdraw':
+                if float(self.balance) < amount:
+                    raise Exception("Insufficient funds")
+                new_balance = float(self.balance) - amount
+            else:
+                raise Exception("Invalid action")
+
+            app.db.execute("""
 UPDATE Users
 SET balance = :new_balance
 WHERE user_id = :user_id
-RETURNING balance
 """,
                               new_balance=new_balance,
                               user_id=self.user_id)
-        if rows:
-            self.balance = rows[0][0]
+            
+            self.balance = new_balance
+            
+            rows = app.db.execute("""
+SELECT balance
+FROM Users
+WHERE user_id = :user_id
+""",
+                              user_id=self.user_id)
+            
+            if rows and float(rows[0][0]) == new_balance:
+                return True
+            else:
+                raise Exception("Balance update verification failed")
+                
+        except Exception as e:
+            raise Exception("Failed to update balance: " + str(e))
+
+    @staticmethod
+    def update_info(user_id, email, full_name, address, password=None):
+        try:
+            if email != User.get(user_id).email:
+                if User.email_exists(email):
+                    raise Exception("Email already in use")
+
+            if password:
+                app.db.execute("""
+UPDATE Users
+SET email = :email,
+    full_name = :full_name,
+    address = :address,
+    password = :password
+WHERE user_id = :user_id
+""",
+                    email=email,
+                    full_name=full_name,
+                    address=address,
+                    password=generate_password_hash(password),
+                    user_id=user_id)
+            else:
+                app.db.execute("""
+UPDATE Users
+SET email = :email,
+    full_name = :full_name,
+    address = :address
+WHERE user_id = :user_id
+""",
+                    email=email,
+                    full_name=full_name,
+                    address=address,
+                    user_id=user_id)
             return True
-        return False
+        except Exception as e:
+            raise Exception("Failed to update user information: " + str(e))
+
+    def get_purchase_history(self):
+        """
+        Retrieves the user's purchase history
+        """
+        since_date = datetime.now() - timedelta(days=365)
+        return Purchase.get_all_by_buyer_since(self.user_id, since_date)
+
+    def get_order_details(self, order_id):
+        """
+        Retrieves detailed information about a specific order
+        """
+        order = Purchase.get(order_id)
+        if not order or order.buyer_id != self.user_id:
+            return None
+
+        items = Purchase.get_items(order_id)
+
+        return {
+            'order': order,
+            'items': items
+        }
+
+    @staticmethod
+    def get_seller_reviews(seller_id):
+        rows = app.db.execute("""
+SELECT review_id, seller_id, user_id, rating, review_text, review_date
+FROM Seller_Reviews
+WHERE seller_id = :seller_id
+ORDER BY review_date DESC
+""",
+                              seller_id=seller_id)
+        return rows
 
     def get_seller_inventory(self):
         """

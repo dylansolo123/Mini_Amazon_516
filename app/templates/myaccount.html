@@ -1,87 +1,120 @@
 {% extends 'base.html' %}
 
 {% block content %}
-  <div class="container mt-5">
-    <h1>My Account</h1>
+<div class="container mt-5">
+  <h1>My Account</h1>
 
-    <h2>Find User Reviews</h2>
-    <form method="POST">
-      {{ form.hidden_tag() }}
-      <div class="form-group">
-        {{ form.user_id.label(class="form-label") }}
-        {{ form.user_id(class="form-control") }}
-        {% if form.user_id.errors %}
-          {% for error in form.user_id.errors %}
-            <span class="text-danger">{{ error }}</span>
-          {% endfor %}
-        {% endif %}
+  <div class="row">
+    <div class="col-md-6">
+      <div class="card mb-4">
+        <div class="card-header">
+          <h2>Profile Information</h2>
+        </div>
+        <div class="card-body">
+          <form method="POST" action="{{ url_for('users.my_account') }}">
+            {{ form.hidden_tag() }}
+            <div class="mb-3">
+              <label class="form-label">User ID</label>
+              <input type="text" class="form-control" value="{{ user.id }}" readonly>
+            </div>
+            <div class="mb-3">
+              {{ form.email.label(class="form-label") }}
+              {{ form.email(class="form-control", value=user.email) }}
+              {% if form.email.errors %}
+                {% for error in form.email.errors %}
+                  <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+              {% endif %}
+            </div>
+            <div class="mb-3">
+              {{ form.full_name.label(class="form-label") }}
+              {{ form.full_name(class="form-control", value=user.full_name) }}
+              {% if form.full_name.errors %}
+                {% for error in form.full_name.errors %}
+                  <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+              {% endif %}
+            </div>
+            <div class="mb-3">
+              {{ form.address.label(class="form-label") }}
+              {{ form.address(class="form-control", value=user.address) }}
+              {% if form.address.errors %}
+                {% for error in form.address.errors %}
+                  <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+              {% endif %}
+            </div>
+            <div class="mb-3">
+              {{ form.password.label(class="form-label") }}
+              {{ form.password(class="form-control") }}
+              {% if form.password.errors %}
+                {% for error in form.password.errors %}
+                  <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+              {% endif %}
+            </div>
+            <button type="submit" class="btn btn-primary">Update Profile</button>
+          </form>
+        </div>
       </div>
-      {{ form.submit(class="btn btn-primary") }}
-    </form>
 
-    {% if user_reviews %}
-    <h2>Reviews for User ID {{ searched_user_id }}</h2>
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Product ID</th>
-          <th>Rating</th>
-          <th>Review Text</th>
-          <th>Date</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for review in user_reviews %}
-        <tr>
-          <td>{{ review.product_id }}</td>
-          <td>{{ review.rating }}</td>
-          <td>{{ review.review_text }}</td>
-          <td>{{ review.date }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    {% else %}
-      <p>No reviews found for User ID {{ searched_user_id }}.</p>
-    {% endif %}
-
-    <div class="row">
-      <div class="col-md-6">
-        <h2>Profile Information</h2>
-        <p><strong>Full Name:</strong> {{ user.full_name }}</p>
-        <p><strong>Email:</strong> {{ user.email }}</p>
-        <p><strong>Address:</strong> {{ user.address }}</p>
-        <a href="#" class="btn btn-primary">Edit Profile</a>
-      </div>
-      <div class="col-md-6">
-        <h2>Account Actions</h2>
-        <ul>
-          <li><a href="#">View Order History</a></li>
-          <li><a href="#">Manage Wishlist</a></li>
-          <li><a href="#">Change Password</a></li>
-        </ul>
+      <div class="card mb-4">
+        <div class="card-header">
+          <h2>Balance Management</h2>
+        </div>
+        <div class="card-body">
+          <h5 class="card-title">Current Balance: ${{ "%.2f"|format(user.balance) }}</h5>
+          <form method="POST" action="{{ url_for('users.update_balance') }}">
+            <div class="mb-3">
+              <label class="form-label">Amount</label>
+              <input type="number" class="form-control" name="amount" step="0.01" min="0" required>
+            </div>
+            <div class="btn-group" role="group">
+              <button type="submit" class="btn btn-success" name="action" value="add">Add Funds</button>
+              <button type="submit" class="btn btn-warning" name="action" value="withdraw">Withdraw</button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
 
-    <h2>Recent Orders</h2>
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Order ID</th>
-          <th>Order Date</th>
-          <th>Total Amount</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>12345</td>
-          <td>2025-03-26</td>
-          <td>$75.00</td>
-          <td>Shipped</td>
-        </tr>
-      </tbody>
-    </table>
-
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">
+          <h2>Purchase History</h2>
+        </div>
+        <div class="card-body">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>Order ID</th>
+                <th>Date</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for purchase in purchases %}
+              <tr>
+                <td>{{ purchase.order_id }}</td>
+                <td>{{ purchase.order_date }}</td>
+                <td>${{ "%.2f"|format(purchase.total_amount) }}</td>
+                <td>{{ purchase.fulfillment_status }}</td>
+                <td>
+                  <a href="{{ url_for('users.order_details', order_id=purchase.order_id) }}" 
+                     class="btn btn-sm btn-info">View Details</a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% if not purchases %}
+          <p class="text-muted">You haven't made any purchases yet.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
   </div>
+</div>
 {% endblock %}

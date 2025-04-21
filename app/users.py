@@ -2,9 +2,10 @@ from flask import render_template, redirect, url_for, flash, request, Blueprint
 from werkzeug.urls import url_parse
 from flask_login import login_user, logout_user, current_user, login_required
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, BooleanField, SubmitField
-from wtforms.validators import ValidationError, DataRequired, Email, EqualTo
+from wtforms import StringField, PasswordField, BooleanField, SubmitField, TextAreaField
+from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Optional
 from .models.user import User
+from .models.purchase import Purchase
 import csv
 from datetime import datetime
 import os
@@ -89,7 +90,6 @@ def get_recent_reviews_by_user_id_from_csv(user_id):
                         'product_id': row['product_id'],
                         'rating': int(row['rating']),
                         'review_text': row['review_text'],
-                        # We'll add a placeholder date for now since the CSV doesn't have a date
                         'date': datetime.now().strftime('%Y-%m-%d')
                     })
     except FileNotFoundError:
@@ -100,23 +100,82 @@ class UserReviewSearchForm(FlaskForm):
     user_id = StringField('User ID', validators=[DataRequired()])
     submit = SubmitField('Search Reviews')
 
+class AccountUpdateForm(FlaskForm):
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    full_name = StringField('Full Name', validators=[DataRequired()])
+    address = TextAreaField('Address', validators=[DataRequired()])
+    password = PasswordField('New Password', validators=[Optional()])
+    submit = SubmitField('Update Profile')
+
+    def validate_email(self, email):
+        if email.data != current_user.email and User.email_exists(email.data):
+            raise ValidationError('Email already in use by another account.')
+
 @bp.route('/my-account', methods=['GET', 'POST'])
 @login_required
 def my_account():
-    form = UserReviewSearchForm()
-    user_reviews = None
-    searched_user_id = None
+    form = AccountUpdateForm()
+    user_reviews = get_recent_reviews_by_user_id_from_csv(current_user.id)
+    purchases = current_user.get_purchase_history()
     
     if form.validate_on_submit():
-        searched_user_id = form.user_id.data
-        user_reviews = get_recent_reviews_by_user_id_from_csv(searched_user_id)
-    else:
-        # Show current user's reviews by default
-        user_reviews = get_recent_reviews_by_user_id_from_csv(current_user.id)
-        searched_user_id = current_user.id
+        try:
+            User.update_info(
+                current_user.id,
+                form.email.data,
+                form.full_name.data,
+                form.address.data,
+                form.password.data if form.password.data else None
+            )
+            flash('Your profile has been updated successfully!', 'success')
+            return redirect(url_for('users.my_account'))
+        except Exception as e:
+            flash(str(e), 'error')
+    
+    if request.method == 'GET':
+        form.email.data = current_user.email
+        form.full_name.data = current_user.full_name
+        form.address.data = current_user.address
     
     return render_template('myaccount.html', 
                          user=current_user, 
                          user_reviews=user_reviews,
-                         searched_user_id=searched_user_id,
+                         purchases=purchases,
+                         searched_user_id=current_user.id,
                          form=form)
+
+@bp.route('/update-balance', methods=['POST'])
+@login_required
+def update_balance():
+    try:
+        amount = float(request.form.get('amount', 0))
+        action = request.form.get('action', 'add')
+        
+        if amount <= 0:
+            flash('Amount must be greater than 0', 'error')
+            return redirect(url_for('users.my_account'))
+            
+        if action == 'withdraw' and current_user.balance < amount:
+            flash('Insufficient funds', 'error')
+            return redirect(url_for('users.my_account'))
+            
+        if current_user.update_balance(amount, action):
+            updated_user = User.get(current_user.id)
+            if updated_user:
+                current_user.balance = updated_user.balance
+            flash(f'Balance updated successfully! New balance: ${current_user.balance:.2f}', 'success')
+        else:
+            flash('Failed to update balance', 'error')
+    except Exception as e:
+        flash(str(e), 'error')
+    return redirect(url_for('users.my_account'))
+
+@bp.route('/order/<int:order_id>')
+@login_required
+def order_details(order_id):
+    order = Purchase.get(order_id)
+    if not order or order.buyer_id != current_user.id:
+        flash('Order not found', 'error')
+        return redirect(url_for('users.my_account'))
+    items = Purchase.get_items(order_id)
+    return render_template('order_details.html', order=order, items=items)

@@ -51,7 +51,7 @@ VALUES(:email, :password, :full_name, :address, 0.00, :is_seller)
 RETURNING user_id
 """,
                                   email=email,
-                                  password=password,
+                                  password=generate_password_hash(password),
                                   full_name=full_name,
                                   address=address,
                                   is_seller=is_seller)

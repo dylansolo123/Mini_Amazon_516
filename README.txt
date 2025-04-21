@@ -54,3 +54,12 @@ db/generated/gen.py - Augmented the gen.py file to create generated data for our
 Kethan - Users Guru:
 Modified base.html (nav bar) to link to my orders drop down to order.html. 
 Created and orders route in index.py to get all orders by a user.
+
+
+
+Milestone 4:
+Eddie - Carts Guru: 
+app/cart.py: Added checkout route to display cart checkout page.
+app/models/cart.py: Added checkout_cart method to handle checkout logic.
+app/templates/cart.html: Updated all button functionality from previous add to cart, trash, and checkout logic.
+app/templates/checkout.html: New template displaying cart items and totals.

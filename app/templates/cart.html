@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block content %}
+{% block content %} 
 <div class="container mt-5">
   <h1 class="mb-4">Your Shopping Cart</h1>
   
@@ -80,7 +80,7 @@
       </form>
       <div>
         <a href="{{ url_for('index.products') }}" class="btn btn-outline-secondary mr-2">Continue Shopping</a>
-        <a href="#" class="btn btn-success" onclick="alert('Checkout functionality will be implemented soon!'); return false;">Proceed to Checkout</a>
+        <a href="{{ url_for('cart.checkout') }}" >Proceed to Checkout</a>
       </div>
     </div>
   {% else %}

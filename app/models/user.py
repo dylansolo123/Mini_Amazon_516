@@ -248,3 +248,59 @@ ORDER BY review_date DESC
         quantity=quantity)
         
         return product_id
+
+    @staticmethod
+    def update_inventory_quantity(seller_id, product_id, new_quantity):
+        """
+        Update quantity of a product in seller's inventory
+        """
+        app.db.execute("""
+        UPDATE Seller_Inventory 
+        SET quantity = :quantity 
+        WHERE seller_id = :seller_id AND product_id = :product_id
+        """,
+        quantity=new_quantity,
+        seller_id=seller_id,
+        product_id=product_id)
+        
+        return True
+        
+    @staticmethod
+    def remove_from_inventory(seller_id, product_id, delete_product=False):
+        """
+        Remove a product from seller's inventory and optionally from Products table
+        """
+        app.db.execute("""
+        DELETE FROM Seller_Inventory 
+        WHERE seller_id = :seller_id AND product_id = :product_id
+        """,
+        seller_id=seller_id,
+        product_id=product_id)
+        
+        if delete_product:
+            app.db.execute("""
+            DELETE FROM Products 
+            WHERE product_id = :product_id AND created_by = :seller_id
+            """,
+            product_id=product_id,
+            seller_id=seller_id)
+        
+        return True
+
+    @staticmethod
+    def get_inventory_item(seller_id, product_id):
+        """
+        Get a specific inventory item
+        """
+        rows = app.db.execute("""
+        SELECT quantity 
+        FROM Seller_Inventory 
+        WHERE seller_id = :seller_id AND product_id = :product_id
+        """,
+        seller_id=seller_id,
+        product_id=product_id)
+        
+        if not rows:
+            return None
+        
+        return rows[0][0]

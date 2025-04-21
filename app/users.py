@@ -120,6 +120,60 @@ def add_product():
     
     return render_template('add_product.html', categories=categories)
 
+@bp.route('/update_inventory_quantity', methods=['POST'])
+@login_required
+def update_inventory_quantity():
+    if not current_user.is_seller:
+        return redirect(url_for('index.index'))
+    
+    product_id = request.form.get('product_id')
+    action = request.form.get('action')
+    
+    try:
+        product_id = int(product_id)        
+        current_quantity = User.get_inventory_item(current_user.user_id, product_id)
+        if current_quantity is None:
+            flash('Product not found in your inventory')
+            return redirect(url_for('users.sales'))
+            
+        if action == 'increase':
+            new_quantity = current_quantity + 1
+        elif action == 'decrease':
+            new_quantity = max(0, current_quantity - 1)
+        else:
+            flash('Invalid action')
+            return redirect(url_for('users.sales'))
+        
+        User.update_inventory_quantity(current_user.user_id, product_id, new_quantity)
+        
+        flash('Inventory updated successfully')
+    except ValueError:
+        flash('Invalid product ID')
+    
+    return redirect(url_for('users.sales'))
+
+@bp.route('/remove_from_inventory', methods=['POST'])
+@login_required
+def remove_from_inventory():
+    if not current_user.is_seller:
+        return redirect(url_for('index.index'))
+    
+    product_id = request.form.get('product_id')
+    delete_product = request.form.get('delete_product') == 'true'
+    
+    try:
+        product_id = int(product_id)
+        User.remove_from_inventory(current_user.user_id, product_id, delete_product)
+    
+        if delete_product:
+            flash('Product permanently removed')
+        else:
+            flash('Product removed from inventory')
+    except ValueError:
+        flash('Invalid product ID')
+    
+    return redirect(url_for('users.sales'))
+
 def get_recent_reviews_by_user_id_from_csv(user_id):
     reviews = []
     csv_filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'db', 'generated', 'product_reviews.csv')

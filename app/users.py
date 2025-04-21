@@ -80,6 +80,46 @@ def sales():
     inventory_items = current_user.get_seller_inventory()
     return render_template('seller_products.html', inventory_items=inventory_items)
 
+@bp.route('/add_product', methods=['GET', 'POST'])
+@login_required
+def add_product():
+    if not current_user.is_seller:
+        return redirect(url_for('index.index'))
+    
+    categories = User.get_categories() #dropdown
+    
+    if request.method == 'POST':
+        category_id = request.form.get('category_id')
+        name = request.form.get('name')
+        description = request.form.get('description')
+        image_url = request.form.get('image_url')
+        price = request.form.get('price')
+        quantity = request.form.get('quantity')
+        
+        try:
+            category_id = int(category_id)
+            price = float(price)
+            quantity = int(quantity)
+            
+            product_id = User.add_product(
+                category_id,
+                name,
+                description,
+                image_url or "http://example.com/images/default.jpg",
+                current_user.user_id,
+                price,
+                quantity
+            )
+            
+            flash('Product added successfully!')
+            return redirect(url_for('users.sales'))
+            
+        except ValueError:
+            flash('Invalid input. Please check your entries.')
+            return redirect(url_for('users.add_product'))
+    
+    return render_template('add_product.html', categories=categories)
+
 def get_recent_reviews_by_user_id_from_csv(user_id):
     reviews = []
     csv_filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'db', 'generated', 'product_reviews.csv')

@@ -206,3 +206,45 @@ ORDER BY review_date DESC
                 'quantity': row[3]
             } for row in rows
         ]
+
+    @staticmethod
+    def get_categories():
+        """
+        Get all product categories for dropdown menu
+        """
+        rows = app.db.execute("""
+        SELECT category_id, category_name 
+        FROM Product_Categories 
+        ORDER BY category_name
+        """)
+        
+        return rows
+
+    @staticmethod
+    def add_product(category_id, name, description, image_url, created_by, price, quantity):
+        """
+        Add a new product and add it to seller's inventory
+        """
+        product_id = app.db.execute("""
+        INSERT INTO Products(category_id, name, description, image_url, created_by)
+        VALUES(:category_id, :name, :description, :image_url, :created_by)
+        RETURNING product_id
+        """, 
+        category_id=category_id,
+        name=name,
+        description=description,
+        image_url=image_url,
+        created_by=created_by)
+        
+        product_id = product_id[0][0]
+        
+        app.db.execute("""
+        INSERT INTO Seller_Inventory(seller_id, product_id, price, quantity)
+        VALUES(:seller_id, :product_id, :price, :quantity)
+        """,
+        seller_id=created_by,
+        product_id=product_id,
+        price=price,
+        quantity=quantity)
+        
+        return product_id

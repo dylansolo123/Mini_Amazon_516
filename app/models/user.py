@@ -133,7 +133,7 @@ WHERE user_id = :user_id
                     email=email,
                     full_name=full_name,
                     address=address,
-                    password=generate_password_hash(password),
+                    password=password,
                     user_id=user_id)
             else:
                 app.db.execute("""

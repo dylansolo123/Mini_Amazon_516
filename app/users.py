@@ -77,8 +77,136 @@ def logout():
 def sales():
     if not current_user.is_seller:
         return redirect(url_for('index.index')) 
+    
+    search_term = request.args.get('search', '')
     inventory_items = current_user.get_seller_inventory()
-    return render_template('seller_products.html', inventory_items=inventory_items)
+    seller_orders = User.get_seller_orders(current_user.user_id)
+    
+    if search_term:
+        filtered_orders = []
+        for order in seller_orders:
+            if (search_term.lower() in str(order['order_id']).lower() or
+                search_term.lower() in order['buyer_name'].lower() or
+                search_term.lower() in order['buyer_address'].lower()):
+                filtered_orders.append(order)
+        seller_orders = filtered_orders
+    
+    return render_template('seller_products.html', 
+                          inventory_items=inventory_items,
+                          orders=seller_orders)
+
+@bp.route('/fulfill-order-item', methods=['POST'])
+@login_required
+def fulfill_order_item():
+    if not current_user.is_seller:
+        return redirect(url_for('index.index'))
+    
+    order_item_id = request.form.get('order_item_id')
+    
+    try:
+        order_item_id = int(order_item_id)
+        User.fulfill_order_item(current_user.user_id, order_item_id)
+        flash('Order item marked as fulfilled!')
+    except ValueError:
+        flash('Invalid order item ID')
+    except Exception as e:
+        flash(str(e))
+    
+    return redirect(url_for('users.sales'))
+
+@bp.route('/add_product', methods=['GET', 'POST'])
+@login_required
+def add_product():
+    if not current_user.is_seller:
+        return redirect(url_for('index.index'))
+    
+    categories = User.get_categories() #dropdown
+    
+    if request.method == 'POST':
+        category_id = request.form.get('category_id')
+        name = request.form.get('name')
+        description = request.form.get('description')
+        image_url = request.form.get('image_url')
+        price = request.form.get('price')
+        quantity = request.form.get('quantity')
+        
+        try:
+            category_id = int(category_id)
+            price = float(price)
+            quantity = int(quantity)
+            
+            product_id = User.add_product(
+                category_id,
+                name,
+                description,
+                image_url or "http://example.com/images/default.jpg",
+                current_user.user_id,
+                price,
+                quantity
+            )
+            
+            flash('Product added successfully!')
+            return redirect(url_for('users.sales'))
+            
+        except ValueError:
+            flash('Invalid input. Please check your entries.')
+            return redirect(url_for('users.add_product'))
+    
+    return render_template('add_product.html', categories=categories)
+
+@bp.route('/update_inventory_quantity', methods=['POST'])
+@login_required
+def update_inventory_quantity():
+    if not current_user.is_seller:
+        return redirect(url_for('index.index'))
+    
+    product_id = request.form.get('product_id')
+    action = request.form.get('action')
+    
+    try:
+        product_id = int(product_id)        
+        current_quantity = User.get_inventory_item(current_user.user_id, product_id)
+        if current_quantity is None:
+            flash('Product not found in your inventory')
+            return redirect(url_for('users.sales'))
+            
+        if action == 'increase':
+            new_quantity = current_quantity + 1
+        elif action == 'decrease':
+            new_quantity = max(0, current_quantity - 1)
+        else:
+            flash('Invalid action')
+            return redirect(url_for('users.sales'))
+        
+        User.update_inventory_quantity(current_user.user_id, product_id, new_quantity)
+        
+        flash('Inventory updated successfully')
+    except ValueError:
+        flash('Invalid product ID')
+    
+    return redirect(url_for('users.sales'))
+
+@bp.route('/remove_from_inventory', methods=['POST'])
+@login_required
+def remove_from_inventory():
+    if not current_user.is_seller:
+        return redirect(url_for('index.index'))
+    
+    product_id = request.form.get('product_id')
+    delete_product = request.form.get('delete_product') == 'true'
+    
+    try:
+        product_id = int(product_id)
+        User.remove_from_inventory(current_user.user_id, product_id, delete_product)
+    
+        if delete_product:
+            flash('Product permanently removed')
+        else:
+            flash('Product removed from inventory')
+    except ValueError:
+        flash('Invalid product ID')
+    
+    return redirect(url_for('users.sales'))
 
 def get_recent_reviews_by_user_id_from_csv(user_id):
     reviews = []

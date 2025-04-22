@@ -1,29 +1,172 @@
-{% extends "sales.html" %}
+{% extends "base.html" %}
 
 {% block content %}
+<div class="container">
+  <br><br>
+  <h2>Products for sale</h2>
 
-<br><br>
+  <div class="mb-3">
+    <a href="{{ url_for('users.add_product') }}" class="btn btn-primary">
+      <i class="fas fa-plus"></i> Add Product
+    </a>
+  </div>
 
-<h2>Products for sale:</h2>
-<table class='table table-hover table-bordered container'>
-  <thead class="thead-dark">
-    <tr>
-      <th scope="col">Product ID</th>
-      <th scope="col">Product Name</th>
-      <th scope="col">Price</th>
-      <th scope="col">Quantity</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for item in inventory_items %}
+  <table class='table table-hover table-bordered container'>
+    <thead class="thead-dark">
       <tr>
-        <th scope="row">{{ item.product_id }}</th>
-        <td>{{ item.product_name }}</td>
-        <td>${{ "%.2f"|format(item.price) }}</td>
-        <td>{{ item.quantity }}</td>
+        <th scope="col">Product ID</th>
+        <th scope="col">Product Name</th>
+        <th scope="col">Price</th>
+        <th scope="col">Quantity</th>
+        <th scope="col">Actions</th>
       </tr>
-    {% endfor %}
-  </tbody>
-</table>
+    </thead>
+    <tbody>
+      {% for item in inventory_items %}
+        <tr>
+          <th scope="row">{{ item.product_id }}</th>
+          <td>{{ item.product_name }}</td>
+          <td>${{ "%.2f"|format(item.price) }}</td>
+          <td>
+            <div class="d-flex align-items-center">
+              <form method="POST" action="{{ url_for('users.update_inventory_quantity') }}" class="d-flex align-items-center">
+                <input type="hidden" name="product_id" value="{{ item.product_id }}">
+                <input type="hidden" name="action" value="decrease">
+                <button type="submit" class="btn btn-sm btn-outline-secondary mr-2" {% if item.quantity <= 0 %}disabled{% endif %}>
+                  <i class="fas fa-minus"></i>
+                </button>
+              </form>
+              <span class="mx-2">{{ item.quantity }}</span>
+              <form method="POST" action="{{ url_for('users.update_inventory_quantity') }}" class="d-flex align-items-center">
+                <input type="hidden" name="product_id" value="{{ item.product_id }}">
+                <input type="hidden" name="action" value="increase">
+                <button type="submit" class="btn btn-sm btn-outline-secondary ml-2">
+                  <i class="fas fa-plus"></i>
+                </button>
+              </form>
+            </div>
+          </td>
+          <td>
+            <form method="POST" action="{{ url_for('users.remove_from_inventory') }}" class="d-inline">
+              <input type="hidden" name="product_id" value="{{ item.product_id }}">
+              <input type="hidden" name="delete_product" value="true">
+              <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to permanently remove this product?')">
+                <i class="fas fa-trash"></i>
+              </button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 
+
+
+
+  <br><br>
+  <h2>Orders to Fulfill</h2>
+
+  <div class="mb-3">
+    <form method="GET" action="{{ url_for('users.sales') }}" class="d-flex" style="max-width: 400px;">
+      <input type="text" name="search" class="form-control" placeholder="Search orders..." value="{{ request.args.get('search', '') }}">
+      <button type="submit" class="btn btn-outline-secondary ml-2">
+        <i class="fas fa-search"></i>
+      </button>
+    </form>
+  </div>
+
+  {% if orders %}
+    <div class="table-responsive">
+      <table class="table table-bordered table-hover">
+        <thead class="thead-dark">
+          <tr>
+            <th>Order #</th>
+            <th>Date</th>
+            <th>Buyer</th>
+            <th>Total (Your Items)</th>
+            <th>Items</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for order in orders %}
+            <tr>
+              <td>{{ order.order_id }}</td>
+              <td>{{ order.order_date.strftime('%Y-%m-%d %H:%M') }}</td>
+              <td>
+                <strong>{{ order.buyer_name }}</strong><br>
+                <small class="text-muted">{{ order.buyer_address }}</small>
+              </td>
+              <td>${{ "%.2f"|format(order.seller_total) }}</td>
+              <td>{{ order.fulfilled_items }}/{{ order.total_items }} fulfilled</td>
+              <td>
+                <span class="badge {% if order.status == 'Fulfilled' %}badge-success{% elif order.status == 'Partially Fulfilled' %}badge-warning{% else %}badge-info{% endif %} p-2">
+                  {{ order.status }}
+                </span>
+              </td>
+              <td>
+                <button class="btn btn-sm btn-info" type="button" data-toggle="collapse" data-target="#details{{ order.order_id }}">
+                  <i class="fas fa-eye"></i> Details
+                </button>
+              </td>
+            </tr>
+            <tr>
+              <td colspan="7" class="p-0">
+                <div id="details{{ order.order_id }}" class="collapse">
+                  <div class="p-3 bg-light">
+                    <h6>Order Items:</h6>
+                    <table class="table table-sm mb-0">
+                      <thead>
+                        <tr>
+                          <th>Product</th>
+                          <th>Quantity</th>
+                          <th>Price</th>
+                          <th>Subtotal</th>
+                          <th>Status</th>
+                          <th>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {% for item in order.order_items %}
+                          <tr>
+                            <td>{{ item.product_name }}</td>
+                            <td>{{ item.quantity }}</td>
+                            <td>${{ "%.2f"|format(item.unit_price) }}</td>
+                            <td>${{ "%.2f"|format(item.subtotal) }}</td>
+                            <td>
+                              <span class="badge {% if item.status == 'Fulfilled' %}badge-success{% else %}badge-warning{% endif %}">
+                                {{ item.status }}
+                              </span>
+                            </td>
+                            <td>
+                              {% if item.status != 'Fulfilled' %}
+                                <form method="POST" action="{{ url_for('users.fulfill_order_item') }}">
+                                  <input type="hidden" name="order_item_id" value="{{ item.order_item_id }}">
+                                  <button type="submit" class="btn btn-sm btn-primary">
+                                    Mark as Fulfilled
+                                  </button>
+                                </form>
+                              {% else %}
+                                <small class="text-muted">Fulfilled</small>
+                              {% endif %}
+                            </td>
+                          </tr>
+                        {% endfor %}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="alert alert-info">
+      <i class="fas fa-info-circle"></i> You don't have any orders to fulfill.
+    </div>
+  {% endif %}
+</div>
 {% endblock %}

@@ -1,4 +1,4 @@
-from flask import render_template, redirect, url_for, flash, request, Blueprint,session
+from flask import render_template, redirect, url_for, flash, request, Blueprint, session, jsonify
 from werkzeug.urls import url_parse
 from flask_login import login_user, logout_user, current_user, login_required
 from flask_wtf import FlaskForm
@@ -6,6 +6,7 @@ from wtforms import StringField, PasswordField, BooleanField, SubmitField, TextA
 from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Optional
 from .models.user import User
 from .models.purchase import Purchase
+from .models.product import Product
 import csv
 from datetime import datetime
 import os
@@ -67,7 +68,6 @@ def register():
 
 @bp.route('/logout')
 def logout():
-    # Clear any flash messages before logging out
     session.pop('_flashes', None)
     logout_user()
     return redirect(url_for('index.index'))
@@ -95,6 +95,150 @@ def sales():
                           inventory_items=inventory_items,
                           orders=seller_orders)
 
+@bp.route('/my-products')
+@login_required
+def my_products():
+    if not current_user.is_seller:
+        flash('You must be a seller to view this page')
+        return redirect(url_for('index.index'))
+    
+    products = Product.get_user_products(current_user.id)
+    return render_template('my_products.html', products=products)
+
+@bp.route('/create-product', methods=['GET', 'POST'])
+@login_required
+def create_product():
+    if not current_user.is_seller:
+        flash('You must be a seller to create products')
+        return redirect(url_for('index.index'))
+    
+    categories = User.get_categories()
+    
+    if request.method == 'POST':
+        category_id = request.form.get('category_id')
+        name = request.form.get('name')
+        description = request.form.get('description')
+        image_url = request.form.get('image_url')
+        price = request.form.get('price')
+        quantity = request.form.get('quantity')
+        
+        try:
+            category_id = int(category_id)
+            price = float(price)
+            quantity = int(quantity)
+            
+            # Create the product
+            product_id = User.add_product(
+                category_id=category_id,
+                name=name,
+                description=description,
+                image_url=image_url or "https://via.placeholder.com/200",
+                created_by=current_user.id,
+                price=price,
+                quantity=quantity
+            )
+            
+            if product_id:
+                flash('Product created successfully!')
+                return redirect(url_for('users.sales'))
+            else:
+                flash('Failed to create product')
+        except ValueError:
+            flash('Invalid input. Please check your entries.')
+        except Exception as e:
+            flash(str(e))
+    
+    return render_template('create_product.html', categories=categories)
+
+@bp.route('/edit-product/<int:product_id>', methods=['GET', 'POST'])
+@login_required
+def edit_product(product_id):
+    if not current_user.is_seller:
+        flash('You must be a seller to edit products')
+        return redirect(url_for('index.index'))
+    
+    product = Product.get(product_id)
+    if not product or product.created_by != current_user.id:
+        flash('Product not found or you do not have permission to edit it')
+        return redirect(url_for('users.my_products'))
+    
+    categories = User.get_categories()
+    inventory = User.get_inventory_item(current_user.id, product_id)
+    
+    if request.method == 'POST':
+        category_id = request.form.get('category_id')
+        name = request.form.get('name')
+        description = request.form.get('description')
+        image_url = request.form.get('image_url')
+        price = request.form.get('price')
+        quantity = request.form.get('quantity')
+        
+        try:
+            category_id = int(category_id)
+            price = float(price)
+            quantity = int(quantity)
+            
+            # Update the product
+            success = User.update_product_info(
+                seller_id=current_user.id,
+                product_id=product_id,
+                name=name,
+                price=price
+            )
+            
+            if success:
+                # Update inventory quantity
+                User.update_inventory_quantity(
+                    current_user.id,
+                    product_id,
+                    quantity
+                )
+                flash('Product updated successfully!')
+                return redirect(url_for('users.sales'))
+            else:
+                flash('Failed to update product')
+        except ValueError:
+            flash('Invalid input. Please check your entries.')
+        except Exception as e:
+            flash(str(e))
+    
+    return render_template('edit_product.html', 
+                         product=product,
+                         categories=categories,
+                         inventory=inventory)
+
+@bp.route('/update-product-info', methods=['POST'])
+@login_required
+def update_product_info():
+    if not current_user.is_seller:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+    
+    try:
+        product_id = int(request.form.get('product_id'))
+        name = request.form.get('name')
+        price = request.form.get('price')
+        
+        if price:
+            try:
+                price = float(price)
+            except ValueError:
+                return jsonify({'success': False, 'message': 'Invalid price format'}), 400
+        
+        success = User.update_product_info(
+            seller_id=current_user.id,
+            product_id=product_id,
+            name=name if name else None,
+            price=price if price else None
+        )
+        
+        if success:
+            return jsonify({'success': True})
+        else:
+            return jsonify({'success': False, 'message': 'Failed to update product'}), 400
+            
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 400
+
 @bp.route('/fulfill-order-item', methods=['POST'])
 @login_required
 def fulfill_order_item():
@@ -114,46 +258,6 @@ def fulfill_order_item():
     
     return redirect(url_for('users.sales'))
 
-@bp.route('/add_product', methods=['GET', 'POST'])
-@login_required
-def add_product():
-    if not current_user.is_seller:
-        return redirect(url_for('index.index'))
-    
-    categories = User.get_categories() #dropdown
-    
-    if request.method == 'POST':
-        category_id = request.form.get('category_id')
-        name = request.form.get('name')
-        description = request.form.get('description')
-        image_url = request.form.get('image_url')
-        price = request.form.get('price')
-        quantity = request.form.get('quantity')
-        
-        try:
-            category_id = int(category_id)
-            price = float(price)
-            quantity = int(quantity)
-            
-            product_id = User.add_product(
-                category_id,
-                name,
-                description,
-                image_url or "http://example.com/images/default.jpg",
-                current_user.user_id,
-                price,
-                quantity
-            )
-            
-            flash('Product added successfully!')
-            return redirect(url_for('users.sales'))
-            
-        except ValueError:
-            flash('Invalid input. Please check your entries.')
-            return redirect(url_for('users.add_product'))
-    
-    return render_template('add_product.html', categories=categories)
-
 @bp.route('/update_inventory_quantity', methods=['POST'])
 @login_required
 def update_inventory_quantity():
@@ -161,28 +265,25 @@ def update_inventory_quantity():
         return redirect(url_for('index.index'))
     
     product_id = request.form.get('product_id')
-    action = request.form.get('action')
+    new_quantity = request.form.get('quantity')
     
     try:
-        product_id = int(product_id)        
-        current_quantity = User.get_inventory_item(current_user.user_id, product_id)
-        if current_quantity is None:
-            flash('Product not found in your inventory')
+        product_id = int(product_id)
+        new_quantity = int(new_quantity)
+        
+        if new_quantity < 0:
+            flash('Quantity cannot be negative')
             return redirect(url_for('users.sales'))
             
-        if action == 'increase':
-            new_quantity = current_quantity + 1
-        elif action == 'decrease':
-            new_quantity = max(0, current_quantity - 1)
+        if User.update_inventory_quantity(current_user.user_id, product_id, new_quantity):
+            flash('Inventory quantity updated successfully!')
         else:
-            flash('Invalid action')
-            return redirect(url_for('users.sales'))
-        
-        User.update_inventory_quantity(current_user.user_id, product_id, new_quantity)
-        
-        flash('Inventory updated successfully')
+            flash('Failed to update inventory quantity')
+            
     except ValueError:
-        flash('Invalid product ID')
+        flash('Invalid input values')
+    except Exception as e:
+        flash(str(e))
     
     return redirect(url_for('users.sales'))
 
@@ -193,38 +294,32 @@ def remove_from_inventory():
         return redirect(url_for('index.index'))
     
     product_id = request.form.get('product_id')
-    delete_product = request.form.get('delete_product') == 'true'
+    delete_product = request.form.get('delete_product', 'false').lower() == 'true'
     
     try:
         product_id = int(product_id)
-        User.remove_from_inventory(current_user.user_id, product_id, delete_product)
-    
-        if delete_product:
-            flash('Product permanently removed')
+        if User.remove_from_inventory(current_user.user_id, product_id, delete_product):
+            flash('Product removed from inventory successfully!')
         else:
-            flash('Product removed from inventory')
+            flash('Failed to remove product from inventory')
     except ValueError:
         flash('Invalid product ID')
+    except Exception as e:
+        flash(str(e))
     
     return redirect(url_for('users.sales'))
 
 def get_recent_reviews_by_user_id_from_csv(user_id):
     reviews = []
-    csv_filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'db', 'generated', 'product_reviews.csv')
     try:
-        with open(csv_filepath, 'r') as csvfile:
-            reader = csv.DictReader(csvfile)
+        with open('reviews.csv', 'r') as file:
+            reader = csv.DictReader(file)
             for row in reader:
-                if row['user_id'] == user_id:
-                    reviews.append({
-                        'product_id': row['product_id'],
-                        'rating': int(row['rating']),
-                        'review_text': row['review_text'],
-                        'date': datetime.now().strftime('%Y-%m-%d')
-                    })
+                if row['user_id'] == str(user_id):
+                    reviews.append(row)
     except FileNotFoundError:
-        return []
-    return reviews[:5]
+        pass
+    return reviews
 
 class UserReviewSearchForm(FlaskForm):
     user_id = StringField('User ID', validators=[DataRequired()])
@@ -236,76 +331,68 @@ class AccountUpdateForm(FlaskForm):
     address = TextAreaField('Address', validators=[DataRequired()])
     password = PasswordField('New Password', validators=[Optional()])
     submit = SubmitField('Update Profile')
-
+    
     def validate_email(self, email):
         if email.data != current_user.email and User.email_exists(email.data):
-            raise ValidationError('Email already in use by another account.')
+            raise ValidationError('Email already in use.')
 
 @bp.route('/my-account', methods=['GET', 'POST'])
 @login_required
 def my_account():
     form = AccountUpdateForm()
-    user_reviews = get_recent_reviews_by_user_id_from_csv(current_user.id)
-    purchases = current_user.get_purchase_history()
+    if request.method == 'GET':
+        form.email.data = current_user.email
+        form.full_name.data = current_user.full_name
+        form.address.data = current_user.address
     
     if form.validate_on_submit():
         try:
-            User.update_info(
+            success = User.update_info(
                 current_user.id,
                 form.email.data,
                 form.full_name.data,
                 form.address.data,
                 form.password.data if form.password.data else None
             )
-            flash('Your profile has been updated successfully!', 'success')
-            return redirect(url_for('users.my_account'))
+            if success:
+                flash('Your account has been updated.')
+                return redirect(url_for('users.my_account'))
         except Exception as e:
-            flash(str(e), 'error')
+            flash(str(e))
     
-    if request.method == 'GET':
-        form.email.data = current_user.email
-        form.full_name.data = current_user.full_name
-        form.address.data = current_user.address
-    
-    return render_template('myaccount.html', 
-                         user=current_user, 
-                         user_reviews=user_reviews,
-                         purchases=purchases,
-                         searched_user_id=current_user.id,
-                         form=form)
+    purchase_history = current_user.get_purchase_history()
+    return render_template('myaccount.html',
+                         title='My Account',
+                         form=form,
+                         user=current_user,
+                         purchases=purchase_history)
 
 @bp.route('/update-balance', methods=['POST'])
 @login_required
 def update_balance():
+    amount = request.form.get('amount', type=float)
+    action = request.form.get('action', 'add')
+    
+    if not amount or amount <= 0:
+        flash('Please enter a valid amount')
+        return redirect(url_for('users.my_account'))
+    
     try:
-        amount = float(request.form.get('amount', 0))
-        action = request.form.get('action', 'add')
-        
-        if amount <= 0:
-            flash('Amount must be greater than 0', 'error')
-            return redirect(url_for('users.my_account'))
-            
-        if action == 'withdraw' and current_user.balance < amount:
-            flash('Insufficient funds', 'error')
-            return redirect(url_for('users.my_account'))
-            
-        if current_user.update_balance(amount, action):
-            updated_user = User.get(current_user.id)
-            if updated_user:
-                current_user.balance = updated_user.balance
-            flash(f'Balance updated successfully! New balance: ${current_user.balance:.2f}', 'success')
-        else:
-            flash('Failed to update balance', 'error')
+        current_user.update_balance(amount, action)
+        flash(f'Balance {"added" if action == "add" else "withdrawn"} successfully!')
     except Exception as e:
-        flash(str(e), 'error')
+        flash(str(e))
+    
     return redirect(url_for('users.my_account'))
 
 @bp.route('/order/<int:order_id>')
 @login_required
 def order_details(order_id):
-    order = Purchase.get(order_id)
-    if not order or order.buyer_id != current_user.id:
-        flash('Order not found', 'error')
+    order_info = current_user.get_order_details(order_id)
+    if not order_info:
+        flash('Order not found')
         return redirect(url_for('users.my_account'))
-    items = Purchase.get_items(order_id)
-    return render_template('order_details.html', order=order, items=items)
+    
+    return render_template('order_details.html',
+                         order=order_info['order'],
+                         items=order_info['items'])

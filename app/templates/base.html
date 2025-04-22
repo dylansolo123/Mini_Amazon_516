@@ -3,19 +3,15 @@
 
 <head>
   <title>Mini Amazon</title>
-  <script src="//code.jquery.com/jquery-1.11.1.min.js"></script>
   <link href="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
-  <script src="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/example.css') }}">
   <style>
     body {
         font-family: "Lato", sans-serif;
-        padding-top: 56px; /* Height of navbar */
-        min-height: 100vh;
-        background-color: #f5f5f5;
+        padding-top: 56px;
     }
-
+    
     .main {
         padding: 20px;
         width: 100%;
@@ -26,102 +22,18 @@
         color: #fff;
     }
 
-    /* Navigation bar styles */
     .navbar {
-        background-color: #563d7c; /* Purple color scheme */
-        position: fixed;
-        top: 0;
-        width: 100%;
-        z-index: 1000;
-    }
-    
-    .navbar-brand {
-        font-size: 1.5rem;
-        font-weight: bold;
-        color: #fff !important;
-    }
-    
-    .navbar .nav-link {
-        color: #fff !important;
-        margin: 0 5px;
-    }
-    
-    .navbar .nav-link:hover {
-        color: #84ccc9 !important; /* Teal accent */
-    }
-    
-    .navbar-toggler {
-        border-color: #fff;
-    }
-
-    /* Cart button */
-    .cart-button {
-        position: relative;
-        padding-right: 8px;
-    }
-    
-    /* Search bar */
-    .search-form {
-        flex-grow: 1;
-        max-width: 500px;
-    }
-    
-    .search-input {
-        border-radius: 4px 0 0 4px !important;
-        border-right: none;
-    }
-    
-    .search-button {
-        background-color: #84ccc9; /* Teal accent */
-        color: #563d7c;
-        border-color: #84ccc9;
-        border-radius: 0 4px 4px 0 !important;
-    }
-    
-    .search-button:hover {
-        background-color: #6bafad; /* Darker teal */
-        border-color: #6bafad;
-    }
-    
-    /* User dropdown */
-    .user-dropdown .dropdown-menu {
-        background-color: #fff;
-        margin-top: 8px;
-    }
-    
-    .user-dropdown .dropdown-item {
-        color: #563d7c;
-    }
-    
-    .user-dropdown .dropdown-item:hover {
-        background-color: #f0ebf7; /* Light purple */
-        color: #563d7c;
-    }
-    
-    /* Table styles */
-    .table {
-        background-color: #fff;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-    
-    .thead-dark {
-        background-color: #563d7c;
-        color: #fff;
-    }
-
-    /* Button styles */
-    .btn-outline-light:hover {
-        color: #563d7c !important;
+        background-color: #343a40;
     }
   </style>
 </head>
 
 <body>
-  <!-- Navigation Bar -->
-  <nav class="navbar navbar-expand-lg navbar-dark">
+  <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
     <div class="container">
       <a class="navbar-brand" href="{{ url_for('index.index') }}">Mini Amazon</a>
-      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" 
+              aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
       </button>
       
@@ -134,56 +46,51 @@
             <a class="nav-link" href="{{ url_for('index.products') }}">Products</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="#">Categories</a>
+            <a class="nav-link" href="{{ url_for('index.products') }}">Categories</a>
           </li>
           {% if current_user.is_authenticated and current_user.is_seller %}
           <li class="nav-item">
-            <a class="nav-link" href="/sales">Sales</a>
+            <a class="nav-link" href="{{ url_for('users.sales') }}">Sales</a>
           </li>
           {% endif %}
         </ul>
         
-        <!-- Search bar -->
-        <form class="form-inline my-2 my-lg-0 search-form mx-auto">
-          <div class="input-group">
-            <input class="form-control search-input" type="search" placeholder="Search products..." aria-label="Search">
-            <div class="input-group-append">
-              <button class="btn search-button" type="submit">
-                <i class="fas fa-search"></i>
-              </button>
-            </div>
-          </div>
+        <form class="form-inline my-2 my-lg-0" action="{{ url_for('index.products') }}" method="GET">
+          <input class="form-control mr-sm-2" type="search" name="search" 
+                 placeholder="Search products..." aria-label="Search" 
+                 value="{{ search_query if search_query }}">
+          <button class="btn btn-outline-light my-2 my-sm-0" type="submit">Search</button>
         </form>
         
         <ul class="navbar-nav ml-auto">
-          <!-- Shopping Cart -->
           <li class="nav-item">
-            <a class="nav-link cart-button" href="{{ url_for('cart.cart_page') }}">
-              <i class="fas fa-shopping-cart"></i>
+            <a class="nav-link" href="{{ url_for('cart.cart_page') }}">
+              <i class="fas fa-shopping-cart"></i> Cart
             </a>
           </li>
           
           {% if current_user.is_authenticated %}
-          <!-- User Account Dropdown -->
-          <li class="nav-item dropdown user-dropdown">
-            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" 
+               data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
               Hello, {{ current_user.full_name }}
             </a>
             <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdown">
-              <a class="dropdown-item" href="/my-account">My Account</a>
+              <a class="dropdown-item" href="{{ url_for('users.my_account') }}">My Account</a>
               <a class="dropdown-item" href="{{ url_for('index.orders') }}">My Orders</a>
-              <a class="dropdown-item" href="#">My Wishlist</a>
+              {% if current_user.is_seller %}
+              <a class="dropdown-item" href="{{ url_for('users.my_products') }}">My Products</a>
+              {% endif %}
               <div class="dropdown-divider"></div>
               <a class="dropdown-item" href="{{ url_for('users.logout') }}">Log out</a>
             </div>
           </li>
           {% else %}
-          <!-- Login/Register -->
           <li class="nav-item">
-            <a class="nav-link btn btn-outline-light btn-sm mr-2" href="{{ url_for('users.login') }}">Log in</a>
+            <a class="nav-link" href="{{ url_for('users.login') }}">Log in</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link btn btn-outline-light btn-sm" href="{{ url_for('users.register') }}">Register</a>
+            <a class="nav-link" href="{{ url_for('users.register') }}">Register</a>
           </li>
           {% endif %}
         </ul>
@@ -191,11 +98,25 @@
     </div>
   </nav>
 
-  <!-- Main Content -->
-  <main class="container main">
-    {% block content %}{% endblock %}
-  </main>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="container mt-3">
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }}">
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
 
+  <div class="main">
+    {% block content %}{% endblock %}
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
 </body>
 
 </html>

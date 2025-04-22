@@ -1,59 +1,375 @@
 {% extends "base.html" %}
 
 {% block content %}
+<div class="container py-4">
+    <!-- Search and Filter Section -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Filters</h5>
+                    <form action="{{ url_for('index.products') }}" method="GET" id="filterForm">
+                        <!-- Category Filter -->
+                        <div class="form-group">
+                            <label for="category">Category</label>
+                            <select class="form-control" name="category_id" id="category">
+                                <option value="">All Categories</option>
+                                {% for category in categories %}
+                                <option value="{{ category[0] }}" 
+                                        {% if current_category == category[0] %}selected{% endif %}>
+                                    {{ category[1] }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
 
-<br><br>
+                        <!-- Price Sort -->
+                        <div class="form-group">
+                            <label for="sort_price">Sort by Price</label>
+                            <select class="form-control" name="sort_price" id="sort_price">
+                                <option value="">Default</option>
+                                <option value="ASC" {% if sort_price == 'ASC' %}selected{% endif %}>
+                                    Low to High
+                                </option>
+                                <option value="DESC" {% if sort_price == 'DESC' %}selected{% endif %}>
+                                    High to Low
+                                </option>
+                            </select>
+                        </div>
 
-<div class="container mb-4">
-    <form class="form-inline" method="GET">
-        <div class="input-group mr-3">
-            <input type="number" class="form-control" name="k" 
-                   value="{{ request.args.get('k', '') }}" 
-                   placeholder="Show top N most expensive products" min="1">
-            <div class="input-group-append">
-                <button class="btn btn-primary" type="submit">Filter</button>
+                        <!-- Top K Filter -->
+                        <div class="form-group">
+                            <div class="custom-control custom-switch mb-2">
+                                <input type="checkbox" class="custom-control-input" id="topKSwitch" 
+                                       {% if top_k %}checked{% endif %}>
+                                <label class="custom-control-label" for="topKSwitch">
+                                    Show Top Most Expensive
+                                </label>
+                            </div>
+                            <div id="topKInputGroup" class="{% if not top_k %}d-none{% endif %}">
+                                <label for="top_k">Number of Products</label>
+                                <input type="number" class="form-control" name="top_k" id="top_k"
+                                       min="1" max="100" value="{{ top_k or 10 }}"
+                                       placeholder="Enter number (1-100)">
+                                <small class="form-text text-muted">
+                                    Enter a number between 1 and 100
+                                </small>
+                            </div>
+                        </div>
+
+                        <!-- Search Query -->
+                        <div class="form-group">
+                            <label for="search">Search</label>
+                            <input type="text" class="form-control" name="search" id="search" 
+                                   value="{{ search_query or '' }}" placeholder="Search products...">
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-block">Apply Filters</button>
+                        <a href="{{ url_for('index.products') }}" class="btn btn-outline-secondary btn-block">
+                            Clear Filters
+                        </a>
+                    </form>
+                </div>
             </div>
         </div>
-    </form>
+
+        <!-- Products Grid -->
+        <div class="col-md-9">
+            {% if search_query %}
+            <h4 class="mb-3">Search Results for "{{ search_query }}"</h4>
+            {% endif %}
+
+            <!-- Results count -->
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <p class="mb-0">
+                    Showing {{ avail_products|length }} of {{ pagination.total_count }} products
+                    {% if pagination.total_pages > 1 %}
+                    (Page {{ pagination.current_page }} of {{ pagination.total_pages }})
+                    {% endif %}
+                </p>
+            </div>
+
+            {% if not avail_products %}
+            <div class="alert alert-info">No products found.</div>
+            {% else %}
+            <div class="row">
+                {% for product in avail_products %}
+                <div class="col-md-3 mb-4">
+                    <div class="card h-100">
+                        <img src="{{ product.image_url or 'https://via.placeholder.com/150' }}" 
+                             class="card-img-top" alt="{{ product.name }}"
+                             style="height: 150px; object-fit: cover;">
+                        <div class="card-body">
+                            <h6 class="card-title">{{ product.name }}</h6>
+                            <p class="card-text text-muted small">
+                                {{ product.description[:100] }}{% if product.description|length > 100 %}...{% endif %}
+                            </p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="h6 mb-0">
+                                    {% if product.price is not none %}
+                                        ${{ "%.2f"|format(product.price) }}
+                                    {% else %}
+                                        <span class="text-muted">Price N/A</span>
+                                    {% endif %}
+                                </span>
+                                {% if product.available_quantity > 0 %}
+                                    <span class="badge badge-success">In Stock</span>
+                                {% else %}
+                                    <span class="badge badge-secondary">Out of Stock</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="card-footer bg-white border-top-0">
+                            <a href="{{ url_for('index.product_details', product_id=product.id) }}" 
+                               class="btn btn-outline-primary btn-sm btn-block">View Details</a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Improved Pagination -->
+            {% if pagination.total_pages > 1 and not top_k %}
+            <nav aria-label="Product pagination" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    <!-- First page -->
+                    <li class="page-item {% if pagination.current_page == 1 %}disabled{% endif %}">
+                        <a class="page-link" href="{{ url_for('index.products', 
+                            page=1,
+                            category_id=current_category,
+                            search=search_query,
+                            sort_price=sort_price) }}">
+                            <span aria-hidden="true">&laquo;</span>
+                            <span class="sr-only">First</span>
+                        </a>
+                    </li>
+
+                    <!-- Previous page -->
+                    <li class="page-item {% if pagination.current_page == 1 %}disabled{% endif %}">
+                        <a class="page-link" href="{{ url_for('index.products', 
+                            page=pagination.current_page-1,
+                            category_id=current_category,
+                            search=search_query,
+                            sort_price=sort_price) }}">Previous</a>
+                    </li>
+                    
+                    <!-- Page numbers -->
+                    {% for page_num in range(pagination.start_page, pagination.end_page + 1) %}
+                    <li class="page-item {% if page_num == pagination.current_page %}active{% endif %}">
+                        <a class="page-link" href="{{ url_for('index.products',
+                            page=page_num,
+                            category_id=current_category,
+                            search=search_query,
+                            sort_price=sort_price) }}">{{ page_num }}</a>
+                    </li>
+                    {% endfor %}
+                    
+                    <!-- Next page -->
+                    <li class="page-item {% if pagination.current_page == pagination.total_pages %}disabled{% endif %}">
+                        <a class="page-link" href="{{ url_for('index.products',
+                            page=pagination.current_page+1,
+                            category_id=current_category,
+                            search=search_query,
+                            sort_price=sort_price) }}">Next</a>
+                    </li>
+
+                    <!-- Last page -->
+                    <li class="page-item {% if pagination.current_page == pagination.total_pages %}disabled{% endif %}">
+                        <a class="page-link" href="{{ url_for('index.products',
+                            page=pagination.total_pages,
+                            category_id=current_category,
+                            search=search_query,
+                            sort_price=sort_price) }}">
+                            <span aria-hidden="true">&raquo;</span>
+                            <span class="sr-only">Last</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+            {% endif %}
+            {% endif %}
+        </div>
+    </div>
 </div>
 
-<h2>Products:</h2>
-<table class='table table-hover table-bordered container'>
-  <thead class="thead-dark">
-    <tr>
-      <th scope="col">Product ID</th>
-      <th scope="col">Product Name</th>
-      <th scope="col">Price</th>
-      <th scope="col">Seller</th>
-      <th scope="col">Actions</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for product in avail_products %}
-      <tr>
-        <th scope="row">{{product.id}}</th>
-        <td>{{product.name}}</td>
-        <td>{% if product.price %}${{ "%.2f"|format(product.price) }}{% else %}Not Available{% endif %}</td>
-        <td>{{ product.seller_name }}</td>
-        <td>
-          {% if product.price and product.seller_id %}
-            <form action="{{ url_for('cart.add_to_cart') }}" method="post">
-              <input type="hidden" name="product_id" value="{{ product.id }}">
-              <input type="hidden" name="seller_id" value="{{ product.seller_id }}">
-              <div class="input-group">
-                <input type="number" name="quantity" value="1" min="1" max="10" class="form-control form-control-sm" style="width: 60px;">
-                <div class="input-group-append">
-                  <button type="submit" class="btn btn-sm btn-success">Add to Cart</button>
-                </div>
-              </div>
-            </form>
-          {% else %}
-            <span class="badge badge-secondary">Not Available</span>
-          {% endif %}
-        </td>
-      </tr>
-    {% endfor %}
-  </tbody>
-</table>
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const topKSwitch = document.getElementById('topKSwitch');
+    const topKInputGroup = document.getElementById('topKInputGroup');
+    const topKInput = document.getElementById('top_k');
+    const form = document.getElementById('filterForm');
 
+    // Toggle top K input visibility
+    topKSwitch.addEventListener('change', function() {
+        if (this.checked) {
+            topKInputGroup.classList.remove('d-none');
+            if (!topKInput.value) {
+                topKInput.value = '10';
+            }
+        } else {
+            topKInputGroup.classList.add('d-none');
+            topKInput.value = '';
+        }
+    });
+
+    // Validate input before form submission
+    form.addEventListener('submit', function(e) {
+        if (topKSwitch.checked) {
+            const value = parseInt(topKInput.value);
+            if (isNaN(value) || value < 1 || value > 100) {
+                e.preventDefault();
+                alert('Please enter a number between 1 and 100');
+                return false;
+            }
+        }
+    });
+
+    // Initialize top K input if value exists
+    if (topKInput.value) {
+        topKSwitch.checked = true;
+        topKInputGroup.classList.remove('d-none');
+    }
+});
+</script>
+{% endblock %}
+
+{% block styles %}
+<style>
+.card {
+    transition: transform 0.2s;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.card-body {
+    padding: 1rem;
+}
+
+.card-footer {
+    background-color: transparent;
+    padding: 1rem;
+    border-top: none;
+}
+
+.badge {
+    padding: 0.4em 0.8em;
+    font-weight: 500;
+}
+
+.badge-success {
+    background-color: #28a745;
+}
+
+.badge-secondary {
+    background-color: #6c757d;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.btn-block + .btn-block {
+    margin-top: 0.5rem;
+}
+
+.pagination {
+    margin-bottom: 0;
+}
+
+.page-link {
+    border: none;
+    color: #007bff;
+    padding: 0.5rem 1rem;
+}
+
+.page-link:hover {
+    background-color: #e9ecef;
+}
+
+.page-item.active .page-link {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+.page-item.disabled .page-link {
+    color: #6c757d;
+    pointer-events: none;
+    background-color: transparent;
+}
+
+.form-control {
+    border-radius: 0.25rem;
+    border: 1px solid #ced4da;
+}
+
+.form-control:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.text-muted {
+    color: #6c757d !important;
+}
+
+.small {
+    font-size: 0.875rem;
+}
+
+/* Custom switch styling */
+.custom-switch {
+    padding-left: 0;
+    position: relative;
+    display: inline-block;
+}
+
+.custom-switch .custom-control-label {
+    padding-left: 3.5rem;
+    line-height: 1.7;
+    position: relative;
+    cursor: pointer;
+}
+
+.custom-switch .custom-control-label::before {
+    position: absolute;
+    top: 0.2rem;
+    left: 0;
+    width: 2.5rem;
+    height: 1.25rem;
+    pointer-events: all;
+    border-radius: 0.625rem;
+    background-color: #e9ecef;
+    border: 1px solid #adb5bd;
+}
+
+.custom-switch .custom-control-label::after {
+    position: absolute;
+    top: calc(0.2rem + 2px);
+    left: 2px;
+    width: calc(1.25rem - 4px);
+    height: calc(1.25rem - 4px);
+    background-color: #adb5bd;
+    border-radius: 0.625rem;
+    transition: transform 0.15s ease-in-out, background-color 0.15s ease-in-out;
+}
+
+.custom-switch .custom-control-input:checked ~ .custom-control-label::before {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+.custom-switch .custom-control-input:checked ~ .custom-control-label::after {
+    background-color: #fff;
+    transform: translateX(1.25rem);
+}
+
+.custom-switch .custom-control-input:focus ~ .custom-control-label::before {
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+</style>
+{% endblock %}
 {% endblock %}

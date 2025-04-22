@@ -2,53 +2,260 @@
 
 {% block content %}
 
-<br><br>
+<!-- Hero Section -->
+<div class="jumbotron jumbotron-fluid bg-primary text-white mb-0">
+    <div class="container py-5">
+        <h1 class="display-4">Welcome to Mini Amazon</h1>
+        <p class="lead">Discover millions of products at great prices</p>
+        <form action="{{ url_for('index.products') }}" method="GET" class="mt-4">
+            <div class="input-group input-group-lg">
+                <input type="text" class="form-control" name="search" 
+                       placeholder="What are you looking for?">
+                <div class="input-group-append">
+                    <button class="btn btn-light" type="submit">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
 
-<h2>Products for sale:</h2>
-<table class='table table-hover table-bordered container'>
-  <thead class="thead-dark">
-    <tr>
-      <th scope="col">Product ID</th>
-      <th scope="col">Product Name</th>
-      <th scope="col">Price</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for product in avail_products%}
-      <tr>
-        <th scope="row">{{product.id}}</th>
-        <td>{{product.name}}</td>
-        <td>{{product.price}}</td>
-      </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<!-- Categories Section -->
+<div class="container py-5">
+    <h2 class="text-center mb-4">Shop by Category</h2>
+    <div class="row">
+        {% for category in categories %}
+        <div class="col-md-3 col-sm-6 mb-4">
+            <a href="{{ url_for('index.products', category_id=category[0]) }}" 
+               class="text-decoration-none">
+                <div class="card h-100 shadow-sm hover-shadow">
+                    <div class="card-body text-center">
+                        <i class="fas fa-tags fa-2x mb-3 text-primary"></i>
+                        <h5 class="card-title text-dark">{{ category[1] }}</h5>
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
 
-<br><br>
-{% if current_user.is_authenticated %}
-<h2>Your recent purchases:</h2>
-<table class='table table-hover table-bordered container'>
-  <thead class="thead-dark">
-    <tr>
-      <th scope="col">Order ID</th>
-      <th scope="col">Order Date</th>
-      <th scope="col">Total Amount</th>
-      <th scope="col">Status</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for purchase in purchase_history%}
-      <tr>
-        <th scope="row">{{purchase.order_id}}</th>
-        <td>{{purchase.order_date}}</td>
-        <td>${{ "%.2f"|format(purchase.total_amount) }}</td>
-        <td>{{purchase.fulfillment_status}}</td>
-      </tr>
-    {% endfor %}
-  </tbody>
-</table>
-{% else %}
-<p><a href="{{ url_for('users.login') }}">Log in</a> to see your purchase history!</p>
+<!-- Featured Products Section -->
+{% if featured_products %}
+<div class="bg-light py-5">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Featured Products</h2>
+            <a href="{{ url_for('index.products') }}" class="btn btn-outline-primary">
+                View All Products
+            </a>
+        </div>
+        <div class="row">
+            {% for product in featured_products %}
+            <div class="col-md-3 col-sm-6 mb-4">
+                <div class="card h-100 shadow-sm">
+                    <img src="{{ product.image_url or 'https://via.placeholder.com/150' }}" 
+                         class="card-img-top" alt="{{ product.name }}"
+                         style="height: 200px; object-fit: cover;">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <a href="{{ url_for('index.product_details', product_id=product.id) }}" 
+                               class="text-decoration-none text-dark">
+                                {{ product.name }}
+                            </a>
+                        </h5>
+                        <p class="card-text text-muted">{{ product.description[:100] }}{% if product.description|length > 100 %}...{% endif %}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="h5 mb-0">
+                                {% if product.price is not none %}
+                                    ${{ "%.2f"|format(product.price) }}
+                                {% else %}
+                                    <span class="text-muted">Price N/A</span>
+                                {% endif %}
+                            </span>
+                            {% if product.available_quantity > 0 %}
+                                <span class="badge badge-success">In Stock</span>
+                            {% else %}
+                                <span class="badge badge-secondary">Out of Stock</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
 {% endif %}
+
+<!-- Top Deals Section -->
+{% if top_deals %}
+<div class="container py-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Top Deals</h2>
+        <a href="{{ url_for('index.products', sort_price='ASC') }}" class="btn btn-outline-primary">
+            View All Deals
+        </a>
+    </div>
+    <div class="row">
+        {% for product in top_deals %}
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="row no-gutters">
+                    <div class="col-md-4">
+                        <img src="{{ product.image_url or 'https://via.placeholder.com/150' }}" 
+                             class="card-img" alt="{{ product.name }}"
+                             style="height: 100%; object-fit: cover;">
+                    </div>
+                    <div class="col-md-8">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <a href="{{ url_for('index.product_details', product_id=product.id) }}" 
+                                   class="text-decoration-none text-dark">
+                                    {{ product.name }}
+                                </a>
+                            </h5>
+                            <p class="card-text">{{ product.description[:150] }}{% if product.description|length > 150 %}...{% endif %}</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    {% if product.price is not none %}
+                                        <span class="h4 text-danger mb-0">${{ "%.2f"|format(product.price) }}</span>
+                                        {% if product.original_price is not none %}
+                                            <small class="text-muted ml-2"><del>${{ "%.2f"|format(product.original_price) }}</del></small>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">Price not available</span>
+                                    {% endif %}
+                                </div>
+                                <a href="{{ url_for('index.product_details', product_id=product.id) }}" 
+                                   class="btn btn-primary">View Deal</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Recent Activity Section (for logged-in users) -->
+{% if current_user.is_authenticated %}
+<div class="bg-light py-5">
+    <div class="container">
+        <h2 class="mb-4">Your Recent Activity</h2>
+        <div class="row">
+            <!-- Recent Orders -->
+            <div class="col-md-6 mb-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Recent Orders</h5>
+                        <a href="{{ url_for('index.orders') }}" class="btn btn-sm btn-outline-primary">
+                            View All
+                        </a>
+                    </div>
+                    <div class="card-body">
+                        {% if purchase_history %}
+                        <div class="list-group list-group-flush">
+                            {% for purchase in purchase_history[:5] %}
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">Order #{{ purchase.order_id }}</h6>
+                                        <small class="text-muted">{{ purchase.order_date.strftime('%B %d, %Y') }}</small>
+                                    </div>
+                                    <div class="text-right">
+                                        <div>${{ "%.2f"|format(purchase.total_amount) }}</div>
+                                        <span class="badge badge-{{ 'success' if purchase.fulfillment_status == 'Fulfilled' else 'warning' }}">
+                                            {{ purchase.fulfillment_status }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <p class="text-muted text-center my-4">No recent orders</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Recommended Products -->
+            <div class="col-md-6 mb-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">Recommended for You</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if recommended_products %}
+                        <div class="list-group list-group-flush">
+                            {% for product in recommended_products[:5] %}
+                            <a href="{{ url_for('index.product_details', product_id=product.id) }}" 
+                               class="list-group-item list-group-item-action">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">{{ product.name }}</h6>
+                                        <small class="text-muted">{{ product.category_name }}</small>
+                                    </div>
+                                    <span class="h6 mb-0">
+                                        {% if product.price is not none %}
+                                            ${{ "%.2f"|format(product.price) }}
+                                        {% else %}
+                                            <span class="text-muted">Price N/A</span>
+                                        {% endif %}
+                                    </span>
+                                </div>
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <p class="text-muted text-center my-4">No recommendations available</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<!-- Call to Action for Non-logged-in Users -->
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 text-center">
+            <h2>Join Mini Amazon Today</h2>
+            <p class="lead text-muted">
+                Create an account to get personalized recommendations, track your orders, 
+                and enjoy the best shopping experience.
+            </p>
+            <div class="mt-4">
+                <a href="{{ url_for('users.register') }}" class="btn btn-primary btn-lg mx-2">
+                    Create Account
+                </a>
+                <a href="{{ url_for('users.login') }}" class="btn btn-outline-primary btn-lg mx-2">
+                    Sign In
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Add custom CSS -->
+{% block styles %}
+<style>
+.hover-shadow:hover {
+    transform: translateY(-5px);
+    transition: transform 0.2s ease-in-out;
+    box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
+}
+
+.jumbotron {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+}
+</style>
+{% endblock %}
 
 {% endblock %}

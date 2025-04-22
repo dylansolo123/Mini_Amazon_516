@@ -60,11 +60,8 @@ RETURNING user_id
             user_id = rows[0][0]
             return User.get(user_id)
         except Exception as e:
-            # likely email already in use; better error checking and reporting needed;
-            # the following simply prints the error to the console:
             print(str(e))
             return None
-
 
     @staticmethod
     @login.user_loader
@@ -251,170 +248,186 @@ ORDER BY review_date DESC
 
     @staticmethod
     def update_inventory_quantity(seller_id, product_id, new_quantity):
-        """
-        Update quantity of a product in seller's inventory
-        """
-        app.db.execute("""
-        UPDATE Seller_Inventory 
-        SET quantity = :quantity 
-        WHERE seller_id = :seller_id AND product_id = :product_id
-        """,
-        quantity=new_quantity,
-        seller_id=seller_id,
-        product_id=product_id)
-        
-        return True
-        
+        try:
+            app.db.execute("""
+            UPDATE Seller_Inventory
+            SET quantity = :new_quantity
+            WHERE seller_id = :seller_id
+            AND product_id = :product_id
+            """,
+            seller_id=seller_id,
+            product_id=product_id,
+            new_quantity=new_quantity)
+            return True
+        except Exception as e:
+            print(str(e))
+            return False
+
     @staticmethod
     def remove_from_inventory(seller_id, product_id, delete_product=False):
-        """
-        Remove a product from seller's inventory and optionally from Products table
-        """
-        app.db.execute("""
-        DELETE FROM Seller_Inventory 
-        WHERE seller_id = :seller_id AND product_id = :product_id
-        """,
-        seller_id=seller_id,
-        product_id=product_id)
-        
-        if delete_product:
-            app.db.execute("""
-            DELETE FROM Products 
-            WHERE product_id = :product_id AND created_by = :seller_id
-            """,
-            product_id=product_id,
-            seller_id=seller_id)
-        
-        return True
+        try:
+            if delete_product:
+                app.db.execute("""
+                DELETE FROM Products
+                WHERE product_id = :product_id
+                AND created_by = :seller_id
+                """,
+                seller_id=seller_id,
+                product_id=product_id)
+            else:
+                app.db.execute("""
+                DELETE FROM Seller_Inventory
+                WHERE seller_id = :seller_id
+                AND product_id = :product_id
+                """,
+                seller_id=seller_id,
+                product_id=product_id)
+            return True
+        except Exception as e:
+            print(str(e))
+            return False
 
     @staticmethod
     def get_inventory_item(seller_id, product_id):
-        """
-        Get a specific inventory item
-        """
-        rows = app.db.execute("""
-        SELECT quantity 
-        FROM Seller_Inventory 
-        WHERE seller_id = :seller_id AND product_id = :product_id
-        """,
-        seller_id=seller_id,
-        product_id=product_id)
-        
-        if not rows:
+        try:
+            rows = app.db.execute("""
+            SELECT quantity
+            FROM Seller_Inventory
+            WHERE seller_id = :seller_id
+            AND product_id = :product_id
+            """,
+            seller_id=seller_id,
+            product_id=product_id)
+            
+            return rows[0][0] if rows else None
+        except Exception as e:
+            print(str(e))
             return None
-        
-        return rows[0][0]
 
     @staticmethod
     def get_seller_orders(seller_id):
-        """
-        Get all orders for a specific seller, sorted by order date in descending order
-        """
+        """Get all orders that contain items sold by this seller"""
         rows = app.db.execute("""
-        SELECT o.order_id, o.order_date, 
-            SUM(oi.quantity * oi.unit_price) AS seller_total, 
-            o.fulfillment_status, 
-            u.user_id AS buyer_id, u.full_name AS buyer_name, u.address AS buyer_address,
-            COUNT(oi.order_item_id) AS total_items,
-            SUM(CASE WHEN oi.fulfillment_status = 'Fulfilled' THEN 1 ELSE 0 END) AS fulfilled_items
+        WITH seller_order_items AS (
+            SELECT oi.order_id,
+                   COUNT(*) as total_items,
+                   SUM(CASE WHEN oi.fulfillment_status = 'Fulfilled' THEN 1 ELSE 0 END) as fulfilled_items,
+                   SUM(oi.quantity * oi.unit_price) as seller_total,
+                   array_agg(json_build_object(
+                       'order_item_id', oi.order_item_id,
+                       'product_name', p.name,
+                       'quantity', oi.quantity,
+                       'unit_price', oi.unit_price,
+                       'subtotal', oi.quantity * oi.unit_price,
+                       'status', oi.fulfillment_status
+                   )) as order_items
+            FROM Order_Items oi
+            JOIN Products p ON oi.product_id = p.product_id
+            WHERE oi.seller_id = :seller_id
+            GROUP BY oi.order_id
+        )
+        SELECT o.order_id,
+               o.order_date,
+               u.full_name as buyer_name,
+               u.address as buyer_address,
+               soi.total_items,
+               soi.fulfilled_items,
+               soi.seller_total,
+               CASE 
+                   WHEN soi.fulfilled_items = 0 THEN 'Pending'
+                   WHEN soi.fulfilled_items = soi.total_items THEN 'Fulfilled'
+                   ELSE 'Partially Fulfilled'
+               END as status,
+               soi.order_items
         FROM Orders o
         JOIN Users u ON o.buyer_id = u.user_id
-        JOIN Order_Items oi ON o.order_id = oi.order_id
-        WHERE oi.seller_id = :seller_id
-        GROUP BY o.order_id, o.order_date, o.fulfillment_status, 
-                u.user_id, u.full_name, u.address
+        JOIN seller_order_items soi ON o.order_id = soi.order_id
         ORDER BY o.order_date DESC
-        """, seller_id=seller_id)
+        """,
+        seller_id=seller_id)
         
-        orders = []
-        for row in rows:
-            order = {
+        return [
+            {
                 'order_id': row[0],
                 'order_date': row[1],
-                'seller_total': row[2], 
-                'status': row[3],
-                'buyer_id': row[4],
-                'buyer_name': row[5],
-                'buyer_address': row[6],
-                'total_items': row[7],
-                'fulfilled_items': row[8],
-                'order_items': [] 
-            }
-            orders.append(order)
-        
-        for order in orders:
-            order['order_items'] = User.get_seller_order_items(seller_id, order['order_id'])
-        
-        return orders
+                'buyer_name': row[2],
+                'buyer_address': row[3],
+                'total_items': row[4],
+                'fulfilled_items': row[5],
+                'seller_total': row[6],
+                'status': row[7],
+                'order_items': row[8]
+            } for row in rows
+        ]
 
     @staticmethod
     def get_seller_order_items(seller_id, order_id):
-        """
-        Get the items for a specific order belonging to a specific seller
-        """
         rows = app.db.execute("""
-        SELECT oi.order_item_id, oi.product_id, p.name AS product_name, 
-            oi.quantity, oi.unit_price, oi.fulfillment_status
+        SELECT oi.order_item_id,
+               p.name as product_name,
+               oi.quantity,
+               oi.unit_price,
+               oi.fulfillment_status,
+               oi.fulfillment_date
         FROM Order_Items oi
         JOIN Products p ON oi.product_id = p.product_id
-        WHERE oi.order_id = :order_id AND oi.seller_id = :seller_id
-        """, order_id=order_id, seller_id=seller_id)
+        WHERE oi.seller_id = :seller_id
+        AND oi.order_id = :order_id
+        """,
+        seller_id=seller_id,
+        order_id=order_id)
         
-        items = []
-        for row in rows:
-            item = {
-                'order_item_id': row[0],
-                'product_id': row[1],
-                'product_name': row[2],
-                'quantity': row[3],
-                'unit_price': row[4],
-                'subtotal': row[3] * row[4],
-                'status': row[5]
-            }
-            items.append(item)
-        
-        return items
-    
+        return rows
+
     @staticmethod
     def fulfill_order_item(seller_id, order_item_id):
+        try:
+            rows = app.db.execute("""
+            UPDATE Order_Items
+            SET fulfillment_status = 'Fulfilled',
+                fulfillment_date = CURRENT_TIMESTAMP
+            WHERE order_item_id = :order_item_id
+            AND seller_id = :seller_id
+            AND fulfillment_status != 'Fulfilled'
+            RETURNING order_item_id
+            """,
+            order_item_id=order_item_id,
+            seller_id=seller_id)
+            
+            return bool(rows)
+        except Exception as e:
+            print(str(e))
+            return False
+
+    @staticmethod
+    def update_product_info(seller_id, product_id, name=None, price=None):
         """
-        Mark an order item as fulfilled by a seller
+        Update product name and/or price for a seller's product
         """
-        rows = app.db.execute("""
-        SELECT seller_id
-        FROM Order_Items
-        WHERE order_item_id = :order_item_id
-        """, order_item_id=order_item_id)
-        
-        if not rows:
-            raise Exception("Order item not found")
-        
-        if rows[0][0] != seller_id:
-            raise Exception("This order item does not belong to you")
-        
-        app.db.execute("""
-        UPDATE Order_Items
-        SET fulfillment_status = 'Fulfilled',
-            fulfillment_date = CURRENT_TIMESTAMP
-        WHERE order_item_id = :order_item_id AND seller_id = :seller_id
-        """, order_item_id=order_item_id, seller_id=seller_id)
-        
-        rows = app.db.execute("""
-        SELECT o.order_id, 
-            COUNT(oi.order_item_id) AS total_items,
-            SUM(CASE WHEN oi.fulfillment_status = 'Fulfilled' THEN 1 ELSE 0 END) AS fulfilled_items
-        FROM Order_Items oi
-        JOIN Orders o ON oi.order_id = o.order_id
-        WHERE oi.order_item_id = :order_item_id
-        GROUP BY o.order_id
-        """, order_item_id=order_item_id)
-        
-        if rows and rows[0][1] == rows[0][2]:
-            # All items are fulfilled, update the order status
-            app.db.execute("""
-            UPDATE Orders
-            SET fulfillment_status = 'Fulfilled'
-            WHERE order_id = :order_id
-            """, order_id=rows[0][0])
-        
-        return True
+        try:
+            if name is not None:
+                app.db.execute("""
+                UPDATE Products
+                SET name = :name
+                WHERE product_id = :product_id
+                AND created_by = :seller_id
+                """,
+                name=name,
+                product_id=product_id,
+                seller_id=seller_id)
+            
+            if price is not None:
+                app.db.execute("""
+                UPDATE Seller_Inventory
+                SET price = :price
+                WHERE product_id = :product_id
+                AND seller_id = :seller_id
+                """,
+                price=price,
+                product_id=product_id,
+                seller_id=seller_id)
+            
+            return True
+        except Exception as e:
+            print(str(e))
+            return False

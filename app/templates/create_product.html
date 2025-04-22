@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Create New Product</h1>
+
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-info">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <form method="POST" class="needs-validation" novalidate>
+        <div class="form-group">
+            <label for="category">Category</label>
+            <select class="form-control" id="category" name="category_id" required>
+                <option value="">Select a category...</option>
+                {% for category in categories %}
+                <option value="{{ category[0] }}">{{ category[1] }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="name">Product Name</label>
+            <input type="text" class="form-control" id="name" name="name" required>
+        </div>
+
+        <div class="form-group">
+            <label for="description">Description</label>
+            <textarea class="form-control" id="description" name="description" rows="3" required></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="image_url">Image URL</label>
+            <input type="url" class="form-control" id="image_url" name="image_url" 
+                   placeholder="https://example.com/image.jpg">
+            <small class="form-text text-muted">Leave blank to use default image</small>
+        </div>
+
+        <div class="form-group">
+            <label for="price">Price ($)</label>
+            <input type="number" class="form-control" id="price" name="price" 
+                   step="0.01" min="0" required>
+        </div>
+
+        <div class="form-group">
+            <label for="quantity">Initial Quantity</label>
+            <input type="number" class="form-control" id="quantity" name="quantity" 
+                   min="0" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Create Product</button>
+        <a href="{{ url_for('users.my_products') }}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+{% endblock %}

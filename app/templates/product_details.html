@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('index.products') }}">Products</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ product.name }}</li>
+        </ol>
+    </nav>
+
+    <!-- Main Product Information -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <img src="{{ product.image_url or 'https://via.placeholder.com/200' }}" 
+                         class="img-fluid rounded" alt="{{ product.name }}">
+                </div>
+                <div class="col-md-8">
+                    <h2>{{ product.name }}</h2>
+                    <p class="text-muted">Category: {{ product.category_name }}</p>
+                    <div class="mb-3">
+                        <span class="h5">Overall Rating: </span>
+                        <span class="text-warning">
+                            {% for i in range(5) %}
+                                {% if i < (product.avg_rating | round | int) %}
+                                    ★
+                                {% else %}
+                                    ☆
+                                {% endif %}
+                            {% endfor %}
+                        </span>
+                        <span class="text-muted">({{ product.review_count }} reviews)</span>
+                    </div>
+                    <p class="lead">{{ product.description }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Left Column: Product Reviews -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Product Reviews</h3>
+                </div>
+                <div class="card-body">
+                    {% if product.reviews %}
+                        {% for review in product.reviews %}
+                        <div class="border-bottom mb-3 pb-3">
+                            <div class="d-flex justify-content-between">
+                                <h5>{{ review.reviewer_name }}</h5>
+                                <small class="text-muted">{{ review.review_date.strftime('%Y-%m-%d') }}</small>
+                            </div>
+                            <div class="text-warning">
+                                {% for i in range(5) %}
+                                    {% if i < review.rating %}
+                                        ★
+                                    {% else %}
+                                        ☆
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                            <p class="mt-2">{{ review.review_text }}</p>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">No reviews yet for this product.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Seller Information -->
+        <div class="col-md-6">
+            <!-- Available Sellers -->
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h3 class="mb-0">Available from Sellers</h3>
+                </div>
+                <div class="card-body">
+                    {% if product.sellers %}
+                        {% for seller in product.sellers %}
+                        <div class="border-bottom mb-3 pb-3">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h5>{{ seller.seller_name }}</h5>
+                                    <div class="text-warning">
+                                        {% for i in range(5) %}
+                                            {% if i < (seller.avg_rating | round | int) %}
+                                                ★
+                                            {% else %}
+                                                ☆
+                                            {% endif %}
+                                        {% endfor %}
+                                        <span class="text-muted">({{ seller.review_count }} reviews)</span>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <h4 class="text-success">${{ "%.2f"|format(seller.price) }}</h4>
+                                    <small class="text-muted">{{ seller.quantity }} available</small>
+                                </div>
+                            </div>
+                            {% if current_user.is_authenticated and seller.quantity > 0 %}
+                            <form action="{{ url_for('cart.add_to_cart') }}" method="POST" class="mt-2">
+                                <input type="hidden" name="product_id" value="{{ product.id }}">
+                                <input type="hidden" name="seller_id" value="{{ seller.seller_id }}">
+                                <div class="input-group">
+                                    <input type="number" name="quantity" class="form-control" 
+                                           value="1" min="1" max="{{ seller.quantity }}">
+                                    <div class="input-group-append">
+                                        <button type="submit" class="btn btn-success">Add to Cart</button>
+                                    </div>
+                                </div>
+                            </form>
+                            {% elif not current_user.is_authenticated %}
+                            <a href="{{ url_for('users.login') }}" class="btn btn-secondary btn-sm mt-2">Login to Purchase</a>
+                            {% else %}
+                            <button class="btn btn-secondary btn-sm mt-2" disabled>Out of Stock</button>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">No sellers available for this product.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Seller Reviews -->
+            {% for seller in product.sellers %}
+            {% if seller.reviews %}
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">{{ seller.seller_name }}'s Reviews</h4>
+                    <div class="text-white">
+                        <span class="h5">{{ "%.1f"|format(seller.avg_rating) }}</span>/5.0
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        {% for review in seller.reviews %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between">
+                                <h6>{{ review.reviewer_name }}</h6>
+                                <small class="text-muted">{{ review.review_date.strftime('%Y-%m-%d') }}</small>
+                            </div>
+                            <div class="text-warning">
+                                {% for i in range(5) %}
+                                    {% if i < review.rating %}
+                                        ★
+                                    {% else %}
+                                        ☆
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                            <p class="mt-2 mb-0">{{ review.review_text }}</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- More Products from this Seller -->
+            {% if seller.other_products %}
+            <div class="card mb-4">
+                <div class="card-header bg-secondary text-white">
+                    <h4 class="mb-0">More from {{ seller.seller_name }}</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for other_product in seller.other_products %}
+                        <div class="col-6 mb-3">
+                            <div class="card h-100">
+                                <img src="{{ other_product.image_url or 'https://via.placeholder.com/150' }}" 
+                                     class="card-img-top" alt="{{ other_product.name }}"
+                                     style="height: 150px; object-fit: cover;">
+                                <div class="card-body">
+                                    <h6 class="card-title">
+                                        <a href="{{ url_for('index.product_details', product_id=other_product.product_id) }}">
+                                            {{ other_product.name }}
+                                        </a>
+                                    </h6>
+                                    <p class="card-text">
+                                        <strong>${{ "%.2f"|format(other_product.price) }}</strong>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+{% block styles %}
+<style>
+.card {
+    border: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.card-header {
+    border-bottom: none;
+}
+
+.breadcrumb {
+    background-color: transparent;
+    padding-left: 0;
+}
+
+.text-warning {
+    font-size: 1.1em;
+}
+
+.list-group-item {
+    border-left: none;
+    border-right: none;
+}
+
+.list-group-item:first-child {
+    border-top: none;
+}
+
+.list-group-item:last-child {
+    border-bottom: none;
+}
+
+.card-img-top {
+    object-fit: cover;
+}
+
+.input-group .form-control {
+    border-right: none;
+}
+
+.input-group .btn {
+    border-left: none;
+}
+
+.btn-success {
+    background-color: #28a745;
+    border-color: #28a745;
+}
+
+.btn-success:hover {
+    background-color: #218838;
+    border-color: #1e7e34;
+}
+</style>
+{% endblock %}
+{% endblock %}

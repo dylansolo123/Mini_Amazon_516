@@ -12,7 +12,11 @@
             <div class="row">
                 <div class="col-md-6">
                     <p><strong>Order ID:</strong> {{ order.order_id }}</p>
-                    <p><strong>Total Amount:</strong> ${{ "%.2f"|format(order.total_amount) }}</p>
+                    {% set total = namespace(value=0) %}
+                    {% for item in items %}
+                        {% set total.value = total.value + (item[4] * item[5]) %}
+                    {% endfor %}
+                    <p><strong>Total Amount:</strong> ${{ "%.2f"|format(total.value) }}</p>
                 </div>
                 <div class="col-md-6">
                     <p><strong>Status:</strong> {{ order.fulfillment_status }}</p>
@@ -30,8 +34,8 @@
             <table class="table table-hover">
                 <thead>
                     <tr>
-                        <th>Product ID</th>
-                        <th>Order ID</th>
+                        <th>Product</th>
+                        <th>Seller</th>
                         <th>Quantity</th>
                         <th>Unit Price</th>
                         <th>Total</th>
@@ -41,15 +45,22 @@
                 <tbody>
                     {% for item in items %}
                     <tr>
-                        <td>{{ item[3] }}</td>
-                        <td>{{ item[1] }}</td> 
-                        <td>{{ item[4] }}</td> 
-                        <td>${{ "%.2f"|format(item[5]) }}</td> 
+                        <td>{{ item[8] }}</td>
+                        <td>{{ item[9] }}</td>
+                        <td>{{ item[4] }}</td>
+                        <td>${{ "%.2f"|format(item[5]) }}</td>
                         <td>${{ "%.2f"|format(item[4] * item[5]) }}</td>
-                        <td>{{ item[6] }}</td> 
+                        <td>{{ item[6] }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="4" class="text-right"><strong>Order Total:</strong></td>
+                        <td><strong>${{ "%.2f"|format(total.value) }}</strong></td>
+                        <td></td>
+                    </tr>
+                </tfoot>
             </table>
         </div>
     </div>

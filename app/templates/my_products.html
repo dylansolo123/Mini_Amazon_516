@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>My Products</h1>
+        <a href="{{ url_for('users.create_product') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Create New Product
+        </a>
+    </div>
+
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-info">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="row">
+        {% for product in products %}
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <img src="{{ product.image_url }}" class="card-img-top" 
+                     alt="{{ product.name }}"
+                     onerror="this.src='https://via.placeholder.com/200'"
+                     style="height: 200px; object-fit: cover;">
+                <div class="card-body">
+                    <h5 class="card-title">{{ product.name }}</h5>
+                    <p class="card-text">
+                        <small class="text-muted">Category: {{ product.category_name }}</small>
+                    </p>
+                    <p class="card-text">{{ product.description }}</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">${{ "%.2f"|format(product.price or 0) }}</h6>
+                        <span class="badge badge-{{ 'success' if product.available_quantity > 0 else 'danger' }}">
+                            {{ product.available_quantity }} in stock
+                        </span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="btn-group w-100">
+                        <a href="{{ url_for('users.edit_product', product_id=product.id) }}" 
+                           class="btn btn-outline-primary">
+                            Edit
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

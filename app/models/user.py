@@ -304,3 +304,117 @@ ORDER BY review_date DESC
             return None
         
         return rows[0][0]
+
+    @staticmethod
+    def get_seller_orders(seller_id):
+        """
+        Get all orders for a specific seller, sorted by order date in descending order
+        """
+        rows = app.db.execute("""
+        SELECT o.order_id, o.order_date, 
+            SUM(oi.quantity * oi.unit_price) AS seller_total, 
+            o.fulfillment_status, 
+            u.user_id AS buyer_id, u.full_name AS buyer_name, u.address AS buyer_address,
+            COUNT(oi.order_item_id) AS total_items,
+            SUM(CASE WHEN oi.fulfillment_status = 'Fulfilled' THEN 1 ELSE 0 END) AS fulfilled_items
+        FROM Orders o
+        JOIN Users u ON o.buyer_id = u.user_id
+        JOIN Order_Items oi ON o.order_id = oi.order_id
+        WHERE oi.seller_id = :seller_id
+        GROUP BY o.order_id, o.order_date, o.fulfillment_status, 
+                u.user_id, u.full_name, u.address
+        ORDER BY o.order_date DESC
+        """, seller_id=seller_id)
+        
+        orders = []
+        for row in rows:
+            order = {
+                'order_id': row[0],
+                'order_date': row[1],
+                'seller_total': row[2], 
+                'status': row[3],
+                'buyer_id': row[4],
+                'buyer_name': row[5],
+                'buyer_address': row[6],
+                'total_items': row[7],
+                'fulfilled_items': row[8],
+                'order_items': [] 
+            }
+            orders.append(order)
+        
+        for order in orders:
+            order['order_items'] = User.get_seller_order_items(seller_id, order['order_id'])
+        
+        return orders
+
+    @staticmethod
+    def get_seller_order_items(seller_id, order_id):
+        """
+        Get the items for a specific order belonging to a specific seller
+        """
+        rows = app.db.execute("""
+        SELECT oi.order_item_id, oi.product_id, p.name AS product_name, 
+            oi.quantity, oi.unit_price, oi.fulfillment_status
+        FROM Order_Items oi
+        JOIN Products p ON oi.product_id = p.product_id
+        WHERE oi.order_id = :order_id AND oi.seller_id = :seller_id
+        """, order_id=order_id, seller_id=seller_id)
+        
+        items = []
+        for row in rows:
+            item = {
+                'order_item_id': row[0],
+                'product_id': row[1],
+                'product_name': row[2],
+                'quantity': row[3],
+                'unit_price': row[4],
+                'subtotal': row[3] * row[4],
+                'status': row[5]
+            }
+            items.append(item)
+        
+        return items
+    
+    @staticmethod
+    def fulfill_order_item(seller_id, order_item_id):
+        """
+        Mark an order item as fulfilled by a seller
+        """
+        rows = app.db.execute("""
+        SELECT seller_id
+        FROM Order_Items
+        WHERE order_item_id = :order_item_id
+        """, order_item_id=order_item_id)
+        
+        if not rows:
+            raise Exception("Order item not found")
+        
+        if rows[0][0] != seller_id:
+            raise Exception("This order item does not belong to you")
+        
+        app.db.execute("""
+        UPDATE Order_Items
+        SET fulfillment_status = 'Fulfilled',
+            fulfillment_date = CURRENT_TIMESTAMP
+        WHERE order_item_id = :order_item_id AND seller_id = :seller_id
+        """, order_item_id=order_item_id, seller_id=seller_id)
+        
+        rows = app.db.execute("""
+        SELECT o.order_id, 
+            COUNT(oi.order_item_id) AS total_items,
+            SUM(CASE WHEN oi.fulfillment_status = 'Fulfilled' THEN 1 ELSE 0 END) AS fulfilled_items
+        FROM Order_Items oi
+        JOIN Orders o ON oi.order_id = o.order_id
+        WHERE oi.order_item_id = :order_item_id
+        GROUP BY o.order_id
+        """, order_item_id=order_item_id)
+        
+        if rows and rows[0][1] == rows[0][2]:
+            # All items are fulfilled, update the order status
+            app.db.execute("""
+            UPDATE Orders
+            SET fulfillment_status = 'Fulfilled'
+            WHERE order_id = :order_id
+            """, order_id=rows[0][0])
+        
+        return True

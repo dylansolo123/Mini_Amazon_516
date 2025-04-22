@@ -77,8 +77,42 @@ def logout():
 def sales():
     if not current_user.is_seller:
         return redirect(url_for('index.index')) 
+    
+    search_term = request.args.get('search', '')
     inventory_items = current_user.get_seller_inventory()
-    return render_template('seller_products.html', inventory_items=inventory_items)
+    seller_orders = User.get_seller_orders(current_user.user_id)
+    
+    if search_term:
+        filtered_orders = []
+        for order in seller_orders:
+            if (search_term.lower() in str(order['order_id']).lower() or
+                search_term.lower() in order['buyer_name'].lower() or
+                search_term.lower() in order['buyer_address'].lower()):
+                filtered_orders.append(order)
+        seller_orders = filtered_orders
+    
+    return render_template('seller_products.html', 
+                          inventory_items=inventory_items,
+                          orders=seller_orders)
+
+@bp.route('/fulfill-order-item', methods=['POST'])
+@login_required
+def fulfill_order_item():
+    if not current_user.is_seller:
+        return redirect(url_for('index.index'))
+    
+    order_item_id = request.form.get('order_item_id')
+    
+    try:
+        order_item_id = int(order_item_id)
+        User.fulfill_order_item(current_user.user_id, order_item_id)
+        flash('Order item marked as fulfilled!')
+    except ValueError:
+        flash('Invalid order item ID')
+    except Exception as e:
+        flash(str(e))
+    
+    return redirect(url_for('users.sales'))
 
 @bp.route('/add_product', methods=['GET', 'POST'])
 @login_required

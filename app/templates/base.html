@@ -78,9 +78,6 @@
             <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdown">
               <a class="dropdown-item" href="{{ url_for('users.my_account') }}">My Account</a>
               <a class="dropdown-item" href="{{ url_for('index.orders') }}">My Orders</a>
-              {% if current_user.is_seller %}
-              <a class="dropdown-item" href="{{ url_for('users.my_products') }}">My Products</a>
-              {% endif %}
               <div class="dropdown-divider"></div>
               <a class="dropdown-item" href="{{ url_for('users.logout') }}">Log out</a>
             </div>

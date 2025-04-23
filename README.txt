@@ -64,6 +64,13 @@ app/models/cart.py: Added checkout_cart method to handle checkout logic.
 app/templates/cart.html: Updated all button functionality from previous add to cart, trash, and checkout logic.
 app/templates/checkout.html: New template displaying cart items and totals.
 
+Aaron - Social Guru:
+app/models/review.py: create and edit reviews, delete reviews and fetch user reviews
+app/models/product.py: show reviews on product page as well as statistics on reviews
+app/users.py: delete and edit a review
+I made the video and report for this milestone
+
+
 Dylan - Products Guru:
 app/models/product.py: Enhanced product filtering with rating functionality, improved product details retrieval, fixed inventory handling.
 - Added min_rating parameter to get_all method for filtering products by rating

@@ -109,3 +109,9 @@ app/index.py: Updated product details route handling and home page functionality
 Kethan - Users Guru:
 modified myaccount.html to be able to update all user field, modify the current balance, and view past orders. I added order_details.html to display the specifics of past orders. Finally modified user.py in /apps to add respective routes, and user.py in /models to add appropriate SQL queries. 
 
+Ciaran - Sellers Guru
+app/users.py: Added search on orders to fulfill as well as orders to fulfill table. Added fulfill order function. Added way to update inventory, add product, and delete product from sellers page. 
+app/models/user.py: added queries for creating new product, updating inventory, removing from inventory, getting inventory items, and getting a sellers’ orders + items. Also allows seller to mark order as fulfilled.
+app/templates/add_product.html: added html to be able to add a new product from a sellers’ view
+app/templates/seller_products.html: expand on first table of products for sale, allowing to add/subtract quantity and delete an item. Also added new orders to fulfill, listing orders chronologically and allowing a user to search for specifics, as well as mark an order as fulfilled.
+app/templates/sales.html: matched base.html template for same look throughout

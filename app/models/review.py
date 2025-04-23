@@ -106,11 +106,31 @@ class Review:
 
     @staticmethod
     def delete(review_id):
-        app.db.execute('''
-            DELETE FROM Product_Reviews
-            WHERE review_id = :review_id
-        ''', review_id=review_id)
-        return True
+        """Delete a review and update product rating statistics."""
+        try:
+            # First get the product_id for the review before deleting
+            product_id_row = app.db.execute('''
+                SELECT product_id 
+                FROM Product_Reviews 
+                WHERE review_id = :review_id
+            ''', review_id=review_id)
+            
+            if not product_id_row:
+                return False
+                
+            product_id = product_id_row[0][0]
+            
+            # Delete the review
+            app.db.execute('''
+                DELETE FROM Product_Reviews
+                WHERE review_id = :review_id
+            ''', review_id=review_id)
+            
+            return True
+            
+        except Exception as e:
+            print(f"Error in delete method: {str(e)}")
+            return False
 
     @staticmethod
     def get_recent_reviews_by_user(user_id, limit=5):

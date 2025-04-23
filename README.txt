@@ -58,6 +58,9 @@ Created and orders route in index.py to get all orders by a user.
 
 
 Milestone 4:
+
+LINK TO DEMO VIDEO: https://www.youtube.com/watch?v=M6dVreg1eeg
+
 Eddie - Carts Guru: 
 app/cart.py: Added checkout route to display cart checkout page.
 app/models/cart.py: Added checkout_cart method to handle checkout logic.

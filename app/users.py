@@ -429,3 +429,40 @@ def delete_review(review_id):
         flash('An error occurred while deleting the review', 'error')
         
     return redirect(url_for('users.my_account'))
+
+@bp.route('/review/<int:review_id>/edit', methods=['POST'])
+@login_required
+def edit_review(review_id):
+    try:
+        # Get the review first to verify ownership
+        review = Review.get(review_id)
+        
+        if not review:
+            flash('Review not found', 'error')
+            return redirect(url_for('users.my_account'))
+            
+        # Check if the review belongs to the current user
+        if review.user_id != current_user.id:
+            flash('You do not have permission to edit this review', 'error')
+            return redirect(url_for('users.my_account'))
+            
+        # Get the updated review data
+        rating = int(request.form.get('rating'))
+        review_text = request.form.get('review_text')
+        
+        # Validate the rating
+        if rating < 1 or rating > 5:
+            flash('Rating must be between 1 and 5', 'error')
+            return redirect(url_for('users.my_account'))
+            
+        # Update the review
+        if Review.update(review_id, rating, review_text):
+            flash('Review updated successfully', 'success')
+        else:
+            flash('Failed to update review', 'error')
+            
+    except Exception as e:
+        print(f"Error updating review: {str(e)}")
+        flash('An error occurred while updating the review', 'error')
+        
+    return redirect(url_for('users.my_account'))

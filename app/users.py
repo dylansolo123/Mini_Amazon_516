@@ -401,3 +401,31 @@ def order_details(order_id):
     return render_template('order_details.html',
                          order=order_info['order'],
                          items=order_info['items'])
+
+@bp.route('/review/<int:review_id>/delete', methods=['POST'])
+@login_required
+def delete_review(review_id):
+    try:
+        # Get the review first to verify ownership
+        review = Review.get(review_id)
+        
+        if not review:
+            flash('Review not found', 'error')
+            return redirect(url_for('users.my_account'))
+            
+        # Check if the review belongs to the current user
+        if review.user_id != current_user.id:
+            flash('You do not have permission to delete this review', 'error')
+            return redirect(url_for('users.my_account'))
+            
+        # Delete the review
+        if Review.delete(review_id):
+            flash('Review deleted successfully', 'success')
+        else:
+            flash('Failed to delete review', 'error')
+            
+    except Exception as e:
+        print(f"Error deleting review: {str(e)}")
+        flash('An error occurred while deleting the review', 'error')
+        
+    return redirect(url_for('users.my_account'))

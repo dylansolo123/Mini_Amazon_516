@@ -63,3 +63,44 @@ app/cart.py: Added checkout route to display cart checkout page.
 app/models/cart.py: Added checkout_cart method to handle checkout logic.
 app/templates/cart.html: Updated all button functionality from previous add to cart, trash, and checkout logic.
 app/templates/checkout.html: New template displaying cart items and totals.
+
+Dylan - Products Guru:
+app/models/product.py: Enhanced product filtering with rating functionality, improved product details retrieval, fixed inventory handling.
+- Added min_rating parameter to get_all method for filtering products by rating
+- Fixed product details retrieval to work for both in-stock and out-of-stock products
+- Improved inventory calculations and price handling
+- Enhanced error handling and logging
+- Standardized SQL queries with proper NULL handling
+- Fixed aggregation of review statistics
+- Improved seller information retrieval in product details
+
+app/templates/product_details.html: Improved product details page layout and functionality.
+- Enhanced layout and spacing for better user experience
+- Added proper handling of empty states
+- Improved display of product information
+- Added rating display and filtering functionality
+- Fixed product availability display
+- Enhanced seller information presentation
+- Improved review display section
+- Added proper error handling for missing products
+
+app/templates/index.html: Enhanced home page layout and functionality.
+- Improved Top Deals section layout
+- Fixed price calculation for original prices
+- Added proper handling of decimal arithmetic
+- Enhanced product card presentation
+- Improved spacing and grid layout
+- Added proper error handling for empty states
+- Fixed product availability display
+- Enhanced visual hierarchy of product information
+- Added proper handling of product ratings
+
+app/index.py: Updated product details route handling and home page functionality.
+- Enhanced error handling for product not found cases
+- Improved product details retrieval logic
+- Added proper redirection for invalid product IDs
+- Fixed route handling for both in-stock and out-of-stock products
+- Fixed decimal arithmetic for price calculations
+- Added proper type conversion for numeric values
+- Enhanced product listing logic for Top Deals
+- Improved error handling for empty product lists

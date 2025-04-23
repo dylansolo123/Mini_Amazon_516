@@ -39,19 +39,6 @@ class Review:
 
     @staticmethod
     def can_review(user_id, product_id):
-        # Check if user has purchased the product
-        purchase_rows = app.db.execute('''
-            SELECT 1 FROM Order_Items oi
-            JOIN Orders o ON o.order_id = oi.order_id
-            WHERE o.buyer_id = :user_id 
-            AND oi.product_id = :product_id
-            AND oi.fulfillment_status = 'Fulfilled'
-            LIMIT 1
-        ''', user_id=user_id, product_id=product_id)
-        
-        if not purchase_rows:
-            return False, "You must purchase this product before reviewing it"
-
         # Check if user has already reviewed the product
         review_rows = app.db.execute('''
             SELECT 1 FROM Product_Reviews

@@ -5,6 +5,7 @@ from decimal import Decimal
 
 from .models.product import Product
 from .models.purchase import Purchase
+from .models.review import Review
 
 from flask import Blueprint
 bp = Blueprint('index', __name__)
@@ -186,13 +187,52 @@ def product_details(product_id):
                 similar_products = [p for p in similar_result['products'] 
                                   if p is not None and p.id != product_id]
 
+        # Check if user has already reviewed the product
+        has_reviewed = False
+        if current_user.is_authenticated:
+            review_rows = Review.get_user_reviews(current_user.id)
+            has_reviewed = any(review.product_id == product_id for review in review_rows)
+
         return render_template('product_details.html',
                              product=product,
-                             similar_products=similar_products[:4])
+                             similar_products=similar_products[:4],
+                             has_reviewed=has_reviewed)
     except Exception as e:
         print(f"Error in product_details route: {str(e)}")
         flash('An error occurred while loading the product details. Please try again later.', 'error')
         return redirect(url_for('index.products'))
+
+@bp.route('/product/<int:product_id>/review', methods=['POST'])
+@login_required
+def add_review(product_id):
+    try:
+        # Get form data
+        rating = request.form.get('rating', type=int)
+        review_text = request.form.get('review_text', '').strip()
+
+        # Validate input
+        if not rating or not (1 <= rating <= 5):
+            flash('Please provide a valid rating between 1 and 5 stars.', 'error')
+            return redirect(url_for('index.product_details', product_id=product_id))
+
+        if not review_text:
+            flash('Please provide a review text.', 'error')
+            return redirect(url_for('index.product_details', product_id=product_id))
+
+        # Create the review
+        review, message = Review.create(current_user.id, product_id, rating, review_text)
+        
+        if review:
+            flash('Your review has been added successfully!', 'success')
+        else:
+            flash(message, 'error')
+
+        return redirect(url_for('index.product_details', product_id=product_id))
+
+    except Exception as e:
+        print(f"Error adding review: {str(e)}")
+        flash('An error occurred while adding your review. Please try again later.', 'error')
+        return redirect(url_for('index.product_details', product_id=product_id))
 
 @bp.route('/orders')
 @login_required

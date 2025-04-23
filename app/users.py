@@ -7,6 +7,7 @@ from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Op
 from .models.user import User
 from .models.purchase import Purchase
 from .models.product import Product
+from .models.review import Review
 import csv
 from datetime import datetime
 import os
@@ -340,32 +341,36 @@ class AccountUpdateForm(FlaskForm):
 @login_required
 def my_account():
     form = AccountUpdateForm()
-    if request.method == 'GET':
-        form.email.data = current_user.email
-        form.full_name.data = current_user.full_name
-        form.address.data = current_user.address
-    
     if form.validate_on_submit():
-        try:
-            success = User.update_info(
-                current_user.id,
-                form.email.data,
-                form.full_name.data,
-                form.address.data,
-                form.password.data if form.password.data else None
-            )
-            if success:
-                flash('Your account has been updated.')
-                return redirect(url_for('users.my_account'))
-        except Exception as e:
-            flash(str(e))
+        if User.update_profile(
+            current_user.id,
+            form.email.data,
+            form.full_name.data,
+            form.address.data,
+            form.password.data if form.password.data else None
+        ):
+            flash('Profile updated successfully!')
+            return redirect(url_for('users.my_account'))
+        else:
+            flash('Failed to update profile')
+
+    # Get user's purchases
+    purchases = Purchase.get_all_by_uid_since(
+        current_user.id,
+        datetime.min
+    )
     
-    purchase_history = current_user.get_purchase_history()
-    return render_template('myaccount.html',
-                         title='My Account',
-                         form=form,
-                         user=current_user,
-                         purchases=purchase_history)
+    # Get user's reviews
+    reviews = Review.get_user_reviews(current_user.id)
+
+    return render_template(
+        'myaccount.html',
+        title='My Account',
+        user=current_user,
+        form=form,
+        purchases=purchases,
+        reviews=reviews
+    )
 
 @bp.route('/update-balance', methods=['POST'])
 @login_required

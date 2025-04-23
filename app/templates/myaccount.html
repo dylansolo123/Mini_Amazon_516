@@ -79,6 +79,47 @@
     </div>
 
     <div class="col-md-6">
+      <!-- My Reviews -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h2>My Reviews</h2>
+        </div>
+        <div class="card-body">
+          {% if reviews %}
+            {% for review in reviews %}
+            <div class="review-item mb-4 border-bottom pb-3">
+              <div class="d-flex align-items-start">
+                <img src="{{ review.product_image or 'https://via.placeholder.com/100' }}" 
+                     class="img-thumbnail mr-3" alt="{{ review.product_name }}"
+                     style="width: 100px; height: 100px; object-fit: cover;">
+                <div class="flex-grow-1">
+                  <h5 class="mb-1">
+                    <a href="{{ url_for('index.product_details', product_id=review.product_id) }}">
+                      {{ review.product_name }}
+                    </a>
+                  </h5>
+                  <div class="text-warning mb-2">
+                    {% for i in range(5) %}
+                      {% if i < review.rating %}
+                        ★
+                      {% else %}
+                        ☆
+                      {% endif %}
+                    {% endfor %}
+                  </div>
+                  <p class="mb-1">{{ review.review_text }}</p>
+                  <small class="text-muted">Reviewed on {{ review.review_time.strftime('%Y-%m-%d') }}</small>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <p class="text-muted">You haven't written any reviews yet.</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Purchase History -->
       <div class="card">
         <div class="card-header">
           <h2>Purchase History</h2>

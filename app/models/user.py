@@ -266,7 +266,41 @@ ORDER BY review_date DESC
     @staticmethod
     def remove_from_inventory(seller_id, product_id, delete_product=False):
         try:
+            app.db.execute("BEGIN")
+            
+            # First remove from Seller_Inventory
+            app.db.execute("""
+            DELETE FROM Seller_Inventory
+            WHERE seller_id = :seller_id
+            AND product_id = :product_id
+            """,
+            seller_id=seller_id,
+            product_id=product_id)
+            
+            # If delete_product is true, forcibly delete from all related tables first
             if delete_product:
+                # Delete from Cart_Items
+                app.db.execute("""
+                DELETE FROM Cart_Items 
+                WHERE product_id = :product_id
+                """, 
+                product_id=product_id)
+                
+                # Delete from Product_Reviews
+                app.db.execute("""
+                DELETE FROM Product_Reviews 
+                WHERE product_id = :product_id
+                """, 
+                product_id=product_id)
+                
+                # Delete from Order_Items (even though it might not be ideal for record-keeping)
+                app.db.execute("""
+                DELETE FROM Order_Items 
+                WHERE product_id = :product_id
+                """, 
+                product_id=product_id)
+                
+                # Finally delete the product itself
                 app.db.execute("""
                 DELETE FROM Products
                 WHERE product_id = :product_id
@@ -274,16 +308,11 @@ ORDER BY review_date DESC
                 """,
                 seller_id=seller_id,
                 product_id=product_id)
-            else:
-                app.db.execute("""
-                DELETE FROM Seller_Inventory
-                WHERE seller_id = :seller_id
-                AND product_id = :product_id
-                """,
-                seller_id=seller_id,
-                product_id=product_id)
+            
+            app.db.execute("COMMIT")
             return True
         except Exception as e:
+            app.db.execute("ROLLBACK")
             print(str(e))
             return False
 

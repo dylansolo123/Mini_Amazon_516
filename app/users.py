@@ -7,6 +7,7 @@ from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Op
 from .models.user import User
 from .models.purchase import Purchase
 from .models.product import Product
+from .models.review import Review
 import csv
 from datetime import datetime
 import os
@@ -340,32 +341,56 @@ class AccountUpdateForm(FlaskForm):
 @login_required
 def my_account():
     form = AccountUpdateForm()
-    if request.method == 'GET':
-        form.email.data = current_user.email
-        form.full_name.data = current_user.full_name
-        form.address.data = current_user.address
-    
-    if form.validate_on_submit():
+    search_form = UserReviewSearchForm()
+    searched_reviews = None
+    searched_user_name = None
+
+    if search_form.validate_on_submit():
         try:
-            success = User.update_info(
-                current_user.id,
-                form.email.data,
-                form.full_name.data,
-                form.address.data,
-                form.password.data if form.password.data else None
-            )
-            if success:
-                flash('Your account has been updated.')
-                return redirect(url_for('users.my_account'))
-        except Exception as e:
-            flash(str(e))
+            search_user_id = int(search_form.user_id.data)
+            # Get user's name first
+            user = User.get(search_user_id)
+            if user:
+                searched_reviews = Review.get_recent_reviews_by_user(search_user_id)
+                searched_user_name = user.full_name
+            else:
+                flash('User not found', 'error')
+        except ValueError:
+            flash('Please enter a valid user ID', 'error')
+
+    if form.validate_on_submit():
+        if User.update_profile(
+            current_user.id,
+            form.email.data,
+            form.full_name.data,
+            form.address.data,
+            form.password.data if form.password.data else None
+        ):
+            flash('Profile updated successfully!')
+            return redirect(url_for('users.my_account'))
+        else:
+            flash('Failed to update profile')
+
+    # Get user's purchases
+    purchases = Purchase.get_all_by_uid_since(
+        current_user.id,
+        datetime.min
+    )
     
-    purchase_history = current_user.get_purchase_history()
-    return render_template('myaccount.html',
-                         title='My Account',
-                         form=form,
-                         user=current_user,
-                         purchases=purchase_history)
+    # Get user's reviews
+    reviews = Review.get_user_reviews(current_user.id)
+
+    return render_template(
+        'myaccount.html',
+        title='My Account',
+        user=current_user,
+        form=form,
+        search_form=search_form,
+        purchases=purchases,
+        reviews=reviews,
+        searched_reviews=searched_reviews,
+        searched_user_name=searched_user_name
+    )
 
 @bp.route('/update-balance', methods=['POST'])
 @login_required
@@ -396,3 +421,68 @@ def order_details(order_id):
     return render_template('order_details.html',
                          order=order_info['order'],
                          items=order_info['items'])
+
+@bp.route('/review/<int:review_id>/delete', methods=['POST'])
+@login_required
+def delete_review(review_id):
+    try:
+        # Get the review first to verify ownership
+        review = Review.get(review_id)
+        
+        if not review:
+            flash('Review not found', 'error')
+            return redirect(url_for('users.my_account'))
+            
+        # Check if the review belongs to the current user
+        if review.user_id != current_user.id:
+            flash('You do not have permission to delete this review', 'error')
+            return redirect(url_for('users.my_account'))
+            
+        # Delete the review
+        if Review.delete(review_id):
+            flash('Review deleted successfully', 'success')
+        else:
+            flash('Failed to delete review', 'error')
+            
+    except Exception as e:
+        print(f"Error deleting review: {str(e)}")
+        flash('An error occurred while deleting the review', 'error')
+        
+    return redirect(url_for('users.my_account'))
+
+@bp.route('/review/<int:review_id>/edit', methods=['POST'])
+@login_required
+def edit_review(review_id):
+    try:
+        # Get the review first to verify ownership
+        review = Review.get(review_id)
+        
+        if not review:
+            flash('Review not found', 'error')
+            return redirect(url_for('users.my_account'))
+            
+        # Check if the review belongs to the current user
+        if review.user_id != current_user.id:
+            flash('You do not have permission to edit this review', 'error')
+            return redirect(url_for('users.my_account'))
+            
+        # Get the updated review data
+        rating = int(request.form.get('rating'))
+        review_text = request.form.get('review_text')
+        
+        # Validate the rating
+        if rating < 1 or rating > 5:
+            flash('Rating must be between 1 and 5', 'error')
+            return redirect(url_for('users.my_account'))
+            
+        # Update the review
+        if Review.update(review_id, rating, review_text):
+            flash('Review updated successfully', 'success')
+        else:
+            flash('Failed to update review', 'error')
+            
+    except Exception as e:
+        print(f"Error updating review: {str(e)}")
+        flash('An error occurred while updating the review', 'error')
+        
+    return redirect(url_for('users.my_account'))

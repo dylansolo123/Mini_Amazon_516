@@ -104,3 +104,8 @@ app/index.py: Updated product details route handling and home page functionality
 - Added proper type conversion for numeric values
 - Enhanced product listing logic for Top Deals
 - Improved error handling for empty product lists
+
+
+Kethan - Users Guru:
+modified myaccount.html to be able to update all user field, modify the current balance, and view past orders. I added order_details.html to display the specifics of past orders. Finally modified user.py in /apps to add respective routes, and user.py in /models to add appropriate SQL queries. 
+

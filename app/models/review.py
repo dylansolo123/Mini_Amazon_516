@@ -110,4 +110,35 @@ class Review:
             DELETE FROM Product_Reviews
             WHERE review_id = :review_id
         ''', review_id=review_id)
-        return True 
+        return True
+
+    @staticmethod
+    def get_recent_reviews_by_user(user_id, limit=5):
+        """Get the most recent reviews by a specific user."""
+        rows = app.db.execute('''
+            SELECT r.review_id, r.user_id, r.product_id, r.rating, r.review_text, r.review_date,
+                   p.name as product_name, p.image_url,
+                   u.full_name as reviewer_name
+            FROM Product_Reviews r
+            JOIN Products p ON p.product_id = r.product_id
+            JOIN Users u ON u.user_id = r.user_id
+            WHERE r.user_id = :user_id
+            ORDER BY r.review_date DESC
+            LIMIT :limit
+        ''', user_id=user_id, limit=limit)
+        
+        if not rows:
+            return []
+            
+        reviews = []
+        for row in rows:
+            review = Review(
+                row[0], row[1], row[2], row[3], row[4], row[5]
+            )
+            # Add product and user information
+            review.product_name = row[6]
+            review.product_image = row[7]
+            review.reviewer_name = row[8]
+            reviews.append(review)
+            
+        return reviews 

@@ -79,6 +79,61 @@
     </div>
 
     <div class="col-md-6">
+      <!-- User Review Search -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h2>Search User Reviews</h2>
+        </div>
+        <div class="card-body">
+          <form method="POST" action="{{ url_for('users.my_account') }}">
+            {{ search_form.hidden_tag() }}
+            <div class="input-group mb-3">
+              {{ search_form.user_id(class="form-control", placeholder="Enter User ID") }}
+              <div class="input-group-append">
+                {{ search_form.submit(class="btn btn-primary") }}
+              </div>
+            </div>
+          </form>
+
+          {% if searched_reviews is not none %}
+            {% if searched_user_name %}
+              <h5 class="mt-4">Recent reviews by {{ searched_user_name }}</h5>
+              {% if searched_reviews %}
+                {% for review in searched_reviews %}
+                <div class="review-item mb-4 border-bottom pb-3">
+                  <div class="d-flex align-items-start">
+                    <img src="{{ review.product_image or 'https://via.placeholder.com/100' }}" 
+                         class="img-thumbnail mr-3" alt="{{ review.product_name }}"
+                         style="width: 100px; height: 100px; object-fit: cover;">
+                    <div class="flex-grow-1">
+                      <h5 class="mb-1">
+                        <a href="{{ url_for('index.product_details', product_id=review.product_id) }}">
+                          {{ review.product_name }}
+                        </a>
+                      </h5>
+                      <div class="text-warning mb-2">
+                        {% for i in range(5) %}
+                          {% if i < review.rating %}
+                            ★
+                          {% else %}
+                            ☆
+                          {% endif %}
+                        {% endfor %}
+                      </div>
+                      <p class="mb-1">{{ review.review_text }}</p>
+                      <small class="text-muted">Reviewed on {{ review.review_time.strftime('%Y-%m-%d') }}</small>
+                    </div>
+                  </div>
+                </div>
+                {% endfor %}
+              {% else %}
+                <p class="text-muted">This user hasn't written any reviews yet.</p>
+              {% endif %}
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
+
       <!-- My Reviews -->
       <div class="card mb-4">
         <div class="card-header">

@@ -341,6 +341,23 @@ class AccountUpdateForm(FlaskForm):
 @login_required
 def my_account():
     form = AccountUpdateForm()
+    search_form = UserReviewSearchForm()
+    searched_reviews = None
+    searched_user_name = None
+
+    if search_form.validate_on_submit():
+        try:
+            search_user_id = int(search_form.user_id.data)
+            # Get user's name first
+            user = User.get(search_user_id)
+            if user:
+                searched_reviews = Review.get_recent_reviews_by_user(search_user_id)
+                searched_user_name = user.full_name
+            else:
+                flash('User not found', 'error')
+        except ValueError:
+            flash('Please enter a valid user ID', 'error')
+
     if form.validate_on_submit():
         if User.update_profile(
             current_user.id,
@@ -368,8 +385,11 @@ def my_account():
         title='My Account',
         user=current_user,
         form=form,
+        search_form=search_form,
         purchases=purchases,
-        reviews=reviews
+        reviews=reviews,
+        searched_reviews=searched_reviews,
+        searched_user_name=searched_user_name
     )
 
 @bp.route('/update-balance', methods=['POST'])

@@ -25,19 +25,21 @@ GROUP BY o.order_id, o.buyer_id, o.order_date, o.fulfillment_status
 
     @staticmethod
     def get_all_by_buyer_since(buyer_id, since):
-        rows = app.db.execute('''
+        rows = app.db.execute(
+            """
 SELECT o.order_id, o.buyer_id, o.order_date, 
-       COALESCE(SUM(oi.quantity * oi.unit_price), 0) as total_amount,
+       SUM(oi.quantity * oi.unit_price) as total_amount,
        o.fulfillment_status
 FROM Orders o
-LEFT JOIN Order_Items oi ON o.order_id = oi.order_id
+INNER JOIN Order_Items oi ON o.order_id = oi.order_id
 WHERE o.buyer_id = :buyer_id
 AND o.order_date >= :since
 GROUP BY o.order_id, o.buyer_id, o.order_date, o.fulfillment_status
 ORDER BY o.order_date DESC
-''',
-                              buyer_id=buyer_id,
-                              since=since)
+""",
+            buyer_id=buyer_id,
+            since=since,
+        )
         return [Purchase(*row) for row in rows]
 
     @staticmethod

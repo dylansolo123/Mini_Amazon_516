@@ -125,3 +125,13 @@ app/models/user.py: added queries for creating new product, updating inventory, 
 app/templates/add_product.html: added html to be able to add a new product from a sellers’ view
 app/templates/seller_products.html: expand on first table of products for sale, allowing to add/subtract quantity and delete an item. Also added new orders to fulfill, listing orders chronologically and allowing a user to search for specifics, as well as mark an order as fulfilled.
 app/templates/sales.html: matched base.html template for same look throughout
+
+
+
+Final Project:
+
+Eddie - Carts Guru:
+app/cart.py - Added checkout and checkout_page routes for cart and order operations.
+app/models/cart.py - Updated Cart model to support checkout logic.
+app/templates/checkout.html - New template for cart item review and order placement.
+app/templates/purchase_failed.html - New template to handle insufficient funds during checkout.

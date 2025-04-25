@@ -2,7 +2,8 @@ from flask import Blueprint, flash, redirect, render_template, request, session,
 from flask_login import current_user, login_required
 
 from .models.cart import Cart
-from .models.product import Product
+from .models.purchase import Purchase
+from .models.user import User
 
 cart_bp = Blueprint('cart', __name__)
 
@@ -106,14 +107,61 @@ def clear_cart():
     return redirect(url_for('cart.cart_page')) 
 
 
+@cart_bp.route("/checkout/page", methods=["GET"])
+@login_required
+def checkout_page():
+    """Checkout page confirmation"""
+    cart_items = Cart.get_cart_items(current_user.id)
+    total = sum(item["total_price"] for item in cart_items)
+    item_count = Cart.get_cart_count(current_user.id)
+    current_balance = current_user.balance
+
+    return render_template(
+        "checkout.html",
+        cart_items=cart_items,
+        total=total,
+        item_count=item_count,
+        current_balance=current_balance,
+    )
+
+
 @cart_bp.route("/checkout", methods=["GET", "POST"])
 @login_required
 def checkout():
     """Checkout items from cart"""
     cart_items = Cart.get_cart_items(current_user.id)
     total = sum(item["total_price"] for item in cart_items)
-    item_count = Cart.get_cart_count(current_user.id)
+    current_balance = current_user.balance
 
-    return render_template(
-        "checkout.html", cart_items=cart_items, total=total, item_count=item_count
-    )
+    if current_balance > total:
+        try:
+            # create order
+            order_id = Purchase.add_purchase(current_user.id, total)
+
+            # add cart items as order items
+            for item in cart_items:
+                Purchase.add_order_item(
+                    order_id=order_id,
+                    seller_id=item["seller_id"],
+                    product_id=item["product_id"],
+                    quantity=item["quantity"],
+                    unit_price=item["unit_price"],
+                )
+
+            # clear cart
+            Cart.clear_cart(current_user.id)
+
+            # subtract total from user balance
+            current_user.update_balance(total, "withdraw")
+
+            # redirect to newly created order page
+            return redirect(url_for("users.order_details", order_id=order_id))
+
+        except Exception as e:
+            flash(f"Error processing order: {str(e)}")
+            return redirect(url_for("cart.checkout_page"))
+
+    else:
+        return render_template(
+            "purchase_failed.html",
+        )

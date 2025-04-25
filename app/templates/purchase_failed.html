@@ -1,0 +1,10 @@
+{% extends 'base.html'%} {% block content %}
+<div>
+  <h2>Order Failed - Insufficient Funds</h2>
+  <a
+    href="{{ url_for('cart.cart_page') }}"
+    class="btn btn-outline-secondary mr-2"
+    >Back to Cart</a
+  >
+</div>
+{% endblock%}

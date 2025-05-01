@@ -15,6 +15,12 @@
                <i class="fas fa-shipping-fast mr-2"></i>Orders to Fulfill
             </a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link {% if active_tab == 'analytics' %}active{% endif %}" 
+               href="{{ url_for('users.sales', tab='analytics') }}">
+               <i class="fas fa-chart-line mr-2"></i>Buyer Analytics
+            </a>
+        </li>
     </ul>
     
     <div class="tab-content" id="sellerTabsContent">
@@ -22,6 +28,8 @@
             {% include 'seller_products.html' %}
         {% elif active_tab == 'orders' %}
             {% include 'seller_orders.html' %}
+        {% elif active_tab == 'analytics' %}
+            {% include 'seller_analytics.html' %}
         {% endif %}
     </div>
 </div>

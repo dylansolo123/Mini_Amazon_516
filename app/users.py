@@ -83,8 +83,11 @@ def sales():
     
     search_term = request.args.get('search', '')
     inventory_items = current_user.get_seller_inventory()
-    seller_orders = User.get_seller_orders(current_user.user_id)
-    product_stats = User.get_product_sales_stats(current_user.user_id)
+    
+    seller_id = User.get_effective_seller_id(current_user.user_id)
+    
+    seller_orders = User.get_seller_orders(seller_id)
+    product_stats = User.get_product_sales_stats(seller_id)
     
     if search_term and active_tab == 'orders':
         filtered_orders = []
@@ -95,11 +98,25 @@ def sales():
                 filtered_orders.append(order)
         seller_orders = filtered_orders
     
+    ratings_data = None
+    top_buyers = None
+    buyer_data = None
+    
+    if active_tab == 'analytics':
+        ratings_data = User.get_seller_ratings_distribution(seller_id)
+        
+        top_buyers = User.get_top_buyers(seller_id, limit=5)
+        
+        buyer_data = User.get_buyer_engagement_data(seller_id)
+    
     return render_template('seller_dashboard.html', 
                           active_tab=active_tab,
                           inventory_items=inventory_items,
                           orders=seller_orders,
-                          product_stats=product_stats)
+                          product_stats=product_stats,
+                          ratings_data=ratings_data,
+                          top_buyers=top_buyers,
+                          buyer_data=buyer_data)
 
 @bp.route('/my-products')
 @login_required
@@ -314,6 +331,32 @@ def remove_from_inventory():
         flash(str(e))
     
     return redirect(url_for('users.sales', tab='products'))
+
+#get details for buyers
+@bp.route('/get-buyer-details/<int:buyer_id>')
+@login_required
+def get_buyer_details(buyer_id):
+    if not current_user.is_seller:
+        return jsonify({'error': 'Unauthorized access'}), 403
+    
+    try:
+        buyer = User.get_buyer_info(current_user.user_id, buyer_id)
+        if not buyer:
+            return jsonify({'error': 'Buyer not found or has no orders with you'}), 404
+            
+        orders = User.get_buyer_orders(current_user.user_id, buyer_id)
+        
+        reviews = User.get_buyer_reviews(current_user.user_id, buyer_id)
+        
+        return jsonify({
+            'buyer': buyer,
+            'orders': orders,
+            'reviews': reviews
+        })
+        
+    except Exception as e:
+        print(f"Error getting buyer details: {str(e)}")
+        return jsonify({'error': 'Failed to fetch buyer details'}), 500
 
 def get_recent_reviews_by_user_id_from_csv(user_id):
     reviews = []

@@ -494,3 +494,337 @@ ORDER BY review_date DESC
         except Exception as e:
             print(str(e))
             return []
+
+    #need to get buyer analytics
+    @staticmethod
+    def get_buyer_info(seller_id, buyer_id):
+        """
+        Get buyer information for a specific seller
+        """
+        try:
+            rows = app.db.execute("""
+            WITH buyer_data AS (
+                SELECT 
+                    u.user_id,
+                    u.email,
+                    u.full_name,
+                    COUNT(DISTINCT o.order_id) AS order_count,
+                    SUM(oi.quantity * oi.unit_price) AS total_spent,
+                    MAX(o.order_date) AS last_order_date
+                FROM Users u
+                JOIN Orders o ON u.user_id = o.buyer_id
+                JOIN Order_Items oi ON o.order_id = oi.order_id
+                WHERE oi.seller_id = :seller_id AND u.user_id = :buyer_id
+                GROUP BY u.user_id, u.email, u.full_name
+            ),
+            buyer_ratings AS (
+                SELECT 
+                    AVG(pr.rating) AS avg_rating
+                FROM Product_Reviews pr
+                JOIN Order_Items oi ON pr.product_id = oi.product_id
+                WHERE oi.seller_id = :seller_id AND pr.user_id = :buyer_id
+            )
+            SELECT 
+                bd.user_id,
+                bd.email,
+                bd.full_name,
+                bd.order_count,
+                bd.total_spent,
+                bd.last_order_date,
+                br.avg_rating
+            FROM buyer_data bd, buyer_ratings br
+            """, seller_id=seller_id, buyer_id=buyer_id)
+            
+            if not rows:
+                return None
+                
+            return {
+                'user_id': rows[0][0],
+                'email': rows[0][1],
+                'full_name': rows[0][2],
+                'order_count': rows[0][3],
+                'total_spent': float(rows[0][4]) if rows[0][4] else 0.0,
+                'last_order_date': rows[0][5],
+                'avg_rating': float(rows[0][6]) if rows[0][6] else None
+            }
+        except Exception as e:
+            print(f"Error getting buyer info: {str(e)}")
+            return None
+            
+    @staticmethod
+    def get_buyer_orders(seller_id, buyer_id):
+        """
+        Get orders made by a specific buyer from a specific seller
+        """
+        try:
+            rows = app.db.execute("""
+            WITH seller_items AS (
+                SELECT 
+                    oi.order_id,
+                    COUNT(oi.order_item_id) AS item_count,
+                    SUM(oi.quantity * oi.unit_price) AS total,
+                    CASE 
+                        WHEN SUM(CASE WHEN oi.fulfillment_status = 'Fulfilled' THEN 1 ELSE 0 END) = COUNT(*) THEN 'Fulfilled'
+                        WHEN SUM(CASE WHEN oi.fulfillment_status = 'Fulfilled' THEN 1 ELSE 0 END) > 0 THEN 'Partially Fulfilled'
+                        ELSE 'Pending'
+                    END AS status
+                FROM Order_Items oi
+                WHERE oi.seller_id = :seller_id
+                GROUP BY oi.order_id
+            )
+            SELECT 
+                o.order_id,
+                o.order_date,
+                si.item_count,
+                si.total,
+                si.status
+            FROM Orders o
+            JOIN seller_items si ON o.order_id = si.order_id
+            WHERE o.buyer_id = :buyer_id
+            ORDER BY o.order_date DESC
+            LIMIT 10
+            """, seller_id=seller_id, buyer_id=buyer_id)
+            
+            return [
+                {
+                    'order_id': row[0],
+                    'order_date': row[1],
+                    'item_count': row[2],
+                    'total': float(row[3]),
+                    'status': row[4]
+                } for row in rows
+            ]
+        except Exception as e:
+            print(f"Error getting buyer orders: {str(e)}")
+            return []
+            
+    @staticmethod
+    def get_buyer_reviews(seller_id, buyer_id):
+        """
+        Get reviews left by a specific buyer for products from a specific seller
+        """
+        try:
+            rows = app.db.execute("""
+            SELECT 
+                pr.review_id,
+                p.product_id,
+                p.name AS product_name,
+                pr.rating,
+                pr.review_text,
+                pr.review_date
+            FROM Product_Reviews pr
+            JOIN Products p ON pr.product_id = p.product_id
+            JOIN Seller_Inventory si ON p.product_id = si.product_id
+            WHERE si.seller_id = :seller_id
+            AND pr.user_id = :buyer_id
+            ORDER BY pr.review_date DESC
+            """, seller_id=seller_id, buyer_id=buyer_id)
+            
+            return [
+                {
+                    'review_id': row[0],
+                    'product_id': row[1],
+                    'product_name': row[2],
+                    'rating': row[3],
+                    'review_text': row[4],
+                    'review_date': row[5]
+                } for row in rows
+            ]
+        except Exception as e:
+            print(f"Error getting buyer reviews: {str(e)}")
+            return []
+
+    @staticmethod
+    def get_seller_ratings_distribution(seller_id):
+        """
+        Get distribution of ratings for a seller
+        """
+        try:
+            rows = app.db.execute("""
+            WITH rating_counts AS (
+                SELECT 
+                    COUNT(CASE WHEN rating = 1 THEN 1 END) AS one_star,
+                    COUNT(CASE WHEN rating = 2 THEN 1 END) AS two_star,
+                    COUNT(CASE WHEN rating = 3 THEN 1 END) AS three_star,
+                    COUNT(CASE WHEN rating = 4 THEN 1 END) AS four_star,
+                    COUNT(CASE WHEN rating = 5 THEN 1 END) AS five_star
+                FROM Product_Reviews pr
+                JOIN Order_Items oi ON pr.product_id = oi.product_id
+                WHERE oi.seller_id = :seller_id
+            )
+            SELECT 
+                COALESCE(one_star, 0) AS one_star,
+                COALESCE(two_star, 0) AS two_star,
+                COALESCE(three_star, 0) AS three_star,
+                COALESCE(four_star, 0) AS four_star,
+                COALESCE(five_star, 0) AS five_star
+            FROM rating_counts
+            """, seller_id=seller_id)
+            
+            if not rows:
+                return {
+                    'one_star': 0,
+                    'two_star': 0,
+                    'three_star': 0,
+                    'four_star': 0,
+                    'five_star': 0
+                }
+                
+            return {
+                'one_star': rows[0][0],
+                'two_star': rows[0][1],
+                'three_star': rows[0][2],
+                'four_star': rows[0][3],
+                'five_star': rows[0][4]
+            }
+        except Exception as e:
+            print(f"Error getting ratings distribution: {str(e)}")
+            return {
+                'one_star': 0,
+                'two_star': 0,
+                'three_star': 0,
+                'four_star': 0,
+                'five_star': 0
+            }
+
+    @staticmethod
+    def get_top_buyers(seller_id, limit=5):
+        """
+        Get top buyers by total orders/purchases from this seller
+        """
+        try:
+            rows = app.db.execute("""
+            SELECT 
+                o.buyer_id,
+                u.full_name AS buyer_name,
+                COUNT(DISTINCT o.order_id) AS total_orders,
+                SUM(oi.quantity * oi.unit_price) AS total_spent
+            FROM Orders o
+            JOIN Users u ON o.buyer_id = u.user_id
+            JOIN Order_Items oi ON o.order_id = oi.order_id
+            WHERE oi.seller_id = :seller_id
+            GROUP BY o.buyer_id, u.full_name
+            ORDER BY total_orders DESC, total_spent DESC
+            LIMIT :limit
+            """, seller_id=seller_id, limit=limit)
+            
+            return [
+                {
+                    'buyer_id': row[0],
+                    'buyer_name': row[1],
+                    'total_orders': row[2],
+                    'total_spent': row[3]
+                } for row in rows
+            ]
+        except Exception as e:
+            print(f"Error getting top buyers: {str(e)}")
+            return []
+    
+    @staticmethod
+    def get_buyer_engagement_data(seller_id):
+        """
+        Get comprehensive data about buyers who have interacted with this seller
+        including orders, messages, and ratings
+        """
+        try:
+            effective_seller_id = User.get_effective_seller_id(seller_id)
+            
+            rows = app.db.execute("""
+            WITH buyer_orders AS (
+                SELECT 
+                    o.buyer_id,
+                    u.full_name AS buyer_name,
+                    COUNT(DISTINCT o.order_id) AS total_orders,
+                    MAX(o.order_date) AS last_purchase,
+                    SUM(oi.quantity * oi.unit_price) AS total_spent
+                FROM Orders o
+                JOIN Users u ON o.buyer_id = u.user_id
+                JOIN Order_Items oi ON o.order_id = oi.order_id
+                WHERE oi.seller_id = :seller_id
+                GROUP BY o.buyer_id, u.full_name
+            ),
+            buyer_messages AS (
+                SELECT 
+                    mt.buyer_id AS user_id,
+                    COUNT(m.message_id) AS message_count
+                FROM Message_Threads mt
+                LEFT JOIN Messages m ON m.thread_id = mt.thread_id
+                WHERE mt.seller_id = :seller_id
+                GROUP BY mt.buyer_id
+            ),
+            buyer_ratings AS (
+                SELECT 
+                    o.buyer_id AS user_id,
+                    AVG(pr.rating) AS avg_rating
+                FROM Orders o
+                JOIN Order_Items oi ON o.order_id = oi.order_id
+                JOIN Product_Reviews pr ON pr.product_id = oi.product_id AND pr.user_id = o.buyer_id
+                WHERE oi.seller_id = :seller_id
+                GROUP BY o.buyer_id
+            ),
+            all_buyers AS (
+                SELECT 
+                    COALESCE(bo.buyer_id, bm.user_id) AS buyer_id,
+                    COALESCE(bo.buyer_name, u.full_name) AS buyer_name,
+                    COALESCE(bo.total_orders, 0) AS total_orders,
+                    COALESCE(bo.total_spent, 0) AS total_spent,
+                    bo.last_purchase,
+                    COALESCE(bm.message_count, 0) AS message_count,
+                    br.avg_rating
+                FROM buyer_orders bo
+                FULL OUTER JOIN buyer_messages bm ON bo.buyer_id = bm.user_id
+                LEFT JOIN Users u ON bm.user_id = u.user_id AND bo.buyer_id IS NULL
+                LEFT JOIN buyer_ratings br ON COALESCE(bo.buyer_id, bm.user_id) = br.user_id
+                WHERE COALESCE(bo.buyer_id, bm.user_id) IS NOT NULL
+            )
+            SELECT * FROM all_buyers
+            ORDER BY total_orders DESC, last_purchase DESC
+            """, seller_id=effective_seller_id)
+            
+            return [
+                {
+                    'buyer_id': row[0],
+                    'buyer_name': row[1],
+                    'total_orders': row[2],
+                    'total_spent': row[3],
+                    'last_purchase': row[4],
+                    'message_count': row[5],
+                    'avg_rating': row[6]
+                } for row in rows
+            ]
+        except Exception as e:
+            print(f"Error getting buyer engagement data: {str(e)}")
+            return []
+
+    @staticmethod
+    def get_effective_seller_id(user_id):
+        """
+        Find the effective seller ID for a user, which may be different from
+        their user ID in some cases due to database inconsistencies.
+        """
+        try:
+            rows = app.db.execute("""
+            SELECT DISTINCT seller_id
+            FROM Message_Threads
+            WHERE seller_id = :user_id
+            LIMIT 1
+            """, user_id=user_id)
+            
+            if rows:
+                return rows[0][0]
+                
+            rows = app.db.execute("""
+            SELECT DISTINCT seller_id
+            FROM Order_Items
+            WHERE seller_id = :user_id
+            LIMIT 1
+            """, user_id=user_id)
+            
+            if rows:
+                return rows[0][0]
+                
+            return user_id
+                
+        except Exception as e:
+            print(f"Error getting effective seller ID: {str(e)}")
+            return user_id

@@ -1,0 +1,413 @@
+<div class="analytics-container">
+    <h3><i class="fas fa-chart-bar mr-2"></i>Buyer Analytics</h3>
+
+    <div class="alert alert-info">
+        <p>Analytics data is being loaded. If no data appears, it might be because you don't have enough buyer data yet.</p>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Product Ratings Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-secondary">
+                        <small>Shows all ratings received for products in your inventory, regardless of which buyer left the rating.</small>
+                    </div>
+                    <canvas id="ratingsChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">Top Buyers by Orders</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="topBuyersChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="card-title mb-0">Buyer Engagement</h5>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-secondary mb-3">
+                <small>This table shows only direct interactions with buyers, who either messaged or ordered from you. The "Avg. Rating" column shows ratings that these specific buyers have left for your products.</small>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Buyer Name</th>
+                            <th>Total Orders</th>
+                            <th>Messages Count</th>
+                            <th>Avg. Rating</th>
+                            <th>Last Purchase</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for buyer in buyer_data %}
+                        <tr>
+                            <td>{{ buyer.buyer_name }}</td>
+                            <td>{{ buyer.total_orders }}</td>
+                            <td>{{ buyer.message_count }}</td>
+                            <td>
+                                {% if buyer.avg_rating %}
+                                <span class="text-warning">
+                                    {% set int_rating = buyer.avg_rating|int %}
+                                    {% for i in range(int_rating) %}
+                                        <i class="fas fa-star"></i>
+                                    {% endfor %}
+                                    
+                                    {% if (buyer.avg_rating - int_rating) >= 0.5 %}
+                                        <i class="fas fa-star-half-alt"></i>
+                                        {% for i in range(4 - int_rating) %}
+                                            <i class="far fa-star"></i>
+                                        {% endfor %}
+                                    {% else %}
+                                        {% for i in range(5 - int_rating) %}
+                                            <i class="far fa-star"></i>
+                                        {% endfor %}
+                                    {% endif %}
+                                    
+                                    ({{ buyer.avg_rating|round(1) }})
+                                </span>
+                                {% else %}
+                                No ratings
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if buyer.last_purchase %}
+                                    {{ buyer.last_purchase.strftime('%Y-%m-%d') if buyer.last_purchase is not string else buyer.last_purchase }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                            <td>
+                                <form action="/get-buyer-details/{{ buyer.buyer_id }}" method="GET" class="d-inline">
+                                    <button type="button" class="btn btn-sm btn-outline-primary view-details" data-buyer-id="{{ buyer.buyer_id }}">
+                                        View Details
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="ratings-data" style="display: none;">
+    <span id="one-star-data">{{ ratings_data.one_star }}</span>
+    <span id="two-star-data">{{ ratings_data.two_star }}</span>
+    <span id="three-star-data">{{ ratings_data.three_star }}</span>
+    <span id="four-star-data">{{ ratings_data.four_star }}</span>
+    <span id="five-star-data">{{ ratings_data.five_star }}</span>
+</div>
+
+<div id="top-buyers-data" style="display: none;">
+    {% for buyer in top_buyers %}
+    <div class="buyer-data">
+        <span class="buyer-name">{{ buyer.buyer_name }}</span>
+        <span class="buyer-orders">{{ buyer.total_orders }}</span>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="modal fade" id="buyerDetailsModal" tabindex="-1" aria-labelledby="buyerDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="buyerDetailsModalLabel">Buyer Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="buyerDetailsContent">
+                    <div class="d-flex justify-content-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const oneStar = parseInt(document.getElementById('one-star-data').textContent) || 0;
+    const twoStar = parseInt(document.getElementById('two-star-data').textContent) || 0;
+    const threeStar = parseInt(document.getElementById('three-star-data').textContent) || 0;
+    const fourStar = parseInt(document.getElementById('four-star-data').textContent) || 0;
+    const fiveStar = parseInt(document.getElementById('five-star-data').textContent) || 0;
+
+    const buyerDivs = document.querySelectorAll('#top-buyers-data .buyer-data');
+    const buyerNames = [];
+    const buyerOrders = [];
+    
+    buyerDivs.forEach(function(div) {
+        const name = div.querySelector('.buyer-name').textContent;
+        const orders = parseInt(div.querySelector('.buyer-orders').textContent) || 0;
+        buyerNames.push(name);
+        buyerOrders.push(orders);
+    });
+
+    const ratingsCtx = document.getElementById('ratingsChart').getContext('2d');
+    const ratingsChart = new Chart(ratingsCtx, {
+        type: 'bar',
+        data: {
+            labels: ['1 Star', '2 Stars', '3 Stars', '4 Stars', '5 Stars'],
+            datasets: [{
+                label: 'Number of Ratings',
+                data: [oneStar, twoStar, threeStar, fourStar, fiveStar],
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.7)',
+                    'rgba(255, 159, 64, 0.7)',
+                    'rgba(255, 205, 86, 0.7)',
+                    'rgba(75, 192, 192, 0.7)',
+                    'rgba(54, 162, 235, 0.7)'
+                ],
+                borderColor: [
+                    'rgb(255, 99, 132)',
+                    'rgb(255, 159, 64)',
+                    'rgb(255, 205, 86)',
+                    'rgb(75, 192, 192)',
+                    'rgb(54, 162, 235)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Rating Distribution'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        precision: 0
+                    }
+                }
+            }
+        }
+    });
+
+    const buyersCtx = document.getElementById('topBuyersChart').getContext('2d');
+    const buyersChart = new Chart(buyersCtx, {
+        type: 'pie',
+        data: {
+            labels: buyerNames,
+            datasets: [{
+                label: 'Orders',
+                data: buyerOrders,
+                backgroundColor: [
+                    'rgba(54, 162, 235, 0.7)',
+                    'rgba(75, 192, 192, 0.7)',
+                    'rgba(255, 205, 86, 0.7)',
+                    'rgba(255, 159, 64, 0.7)',
+                    'rgba(255, 99, 132, 0.7)'
+                ],
+                hoverOffset: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Top 5 Buyers by Orders'
+                }
+            }
+        }
+    });
+    
+    document.querySelectorAll('#buyerDetailsModal .btn-close, #buyerDetailsModal .btn-secondary').forEach(function(button) {
+        button.addEventListener('click', function() {
+            closeModal();
+        });
+    });
+    
+    document.querySelectorAll('.view-details').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const buyerId = this.getAttribute('data-buyer-id');
+            showBuyerDetails(buyerId);
+        });
+    });
+});
+
+function closeModal() {
+    try {
+        if (typeof bootstrap !== 'undefined') {
+            const modalElement = document.getElementById('buyerDetailsModal');
+            const modal = bootstrap.Modal.getInstance(modalElement);
+            if (modal) {
+                modal.hide();
+            } else {
+                const newModal = new bootstrap.Modal(modalElement);
+                newModal.hide();
+            }
+        } 
+        else if (typeof $ !== 'undefined') {
+            $('#buyerDetailsModal').modal('hide');
+        }
+        else {
+            document.getElementById('buyerDetailsModal').style.display = 'none';
+            const backdrop = document.querySelector('.modal-backdrop');
+            if (backdrop) {
+                backdrop.parentNode.removeChild(backdrop);
+            }
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
+        }
+    } catch (e) {
+        console.error("Error hiding modal:", e);
+        document.getElementById('buyerDetailsModal').style.display = 'none';
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        const backdrop = document.querySelector('.modal-backdrop');
+        if (backdrop) {
+            backdrop.parentNode.removeChild(backdrop);
+        }
+    }
+}
+
+function showBuyerDetails(buyerId) {
+    try {
+        if (typeof bootstrap !== 'undefined') {
+            const modal = new bootstrap.Modal(document.getElementById('buyerDetailsModal'));
+            modal.show();
+        } 
+        else if (typeof $ !== 'undefined') {
+            $('#buyerDetailsModal').modal('show');
+        }
+        else {
+            document.getElementById('buyerDetailsModal').style.display = 'block';
+        }
+    } catch (e) {
+        console.error("Error showing modal:", e);
+        document.getElementById('buyerDetailsModal').style.display = 'block';
+    }
+    
+    const content = document.getElementById('buyerDetailsContent');
+    content.innerHTML = `
+        <div class="d-flex justify-content-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    `;
+    
+    fetch(`/get-buyer-details/${buyerId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                content.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
+                return;
+            }
+            
+            const buyer = data.buyer;
+            const orders = data.orders;
+            const reviews = data.reviews;
+            
+            let html = `
+                <div class="buyer-profile mb-4">
+                    <h4>${buyer.full_name}</h4>
+                    <p><strong>Email:</strong> ${buyer.email}</p>
+                    <p><strong>Total Orders:</strong> ${orders.length}</p>
+                    <p><strong>Total Spent:</strong> $${parseFloat(buyer.total_spent || 0).toFixed(2)}</p>
+                    <p><strong>Average Rating:</strong> ${buyer.avg_rating ? parseFloat(buyer.avg_rating).toFixed(1) + '/5.0' : 'No ratings'}</p>
+                </div>
+                
+                <h5>Recent Orders</h5>
+                <div class="table-responsive mb-4">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Date</th>
+                                <th>Items</th>
+                                <th>Total</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+            
+            if (orders && orders.length > 0) {
+                for (let i = 0; i < orders.length; i++) {
+                    const order = orders[i];
+                    const orderDate = new Date(order.order_date);
+                    html += `
+                        <tr>
+                            <td>${order.order_id}</td>
+                            <td>${orderDate.toLocaleDateString()}</td>
+                            <td>${order.item_count}</td>
+                            <td>$${parseFloat(order.total || 0).toFixed(2)}</td>
+                            <td>${order.status}</td>
+                        </tr>`;
+                }
+            } else {
+                html += `<tr><td colspan="5" class="text-center">No orders found</td></tr>`;
+            }
+            
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+                
+                <h5>Reviews Given</h5>`;
+                
+            if (reviews && reviews.length > 0) {
+                html += `<div class="reviews-list">`;
+                for (let i = 0; i < reviews.length; i++) {
+                    const review = reviews[i];
+                    const reviewDate = new Date(review.review_date);
+                    html += `
+                        <div class="card mb-2">
+                            <div class="card-body">
+                                <h6 class="card-title">${review.product_name}</h6>
+                                <div class="rating mb-2">`;
+                    
+                    for (let j = 0; j < 5; j++) {
+                        if (j < review.rating) {
+                            html += '<i class="fas fa-star text-warning"></i>';
+                        } else {
+                            html += '<i class="far fa-star text-warning"></i>';
+                        }
+                    }
+                    
+                    html += `
+                                </div>
+                                <p class="card-text">${review.review_text || 'No comments provided.'}</p>
+                                <small class="text-muted">Posted on ${reviewDate.toLocaleDateString()}</small>
+                            </div>
+                        </div>`;
+                }
+                html += `</div>`;
+            } else {
+                html += `<p>No reviews have been provided by this buyer.</p>`;
+            }
+            
+            content.innerHTML = html;
+        })
+        .catch(error => {
+            content.innerHTML = `<div class="alert alert-danger">Error loading buyer details: ${error.message}</div>`;
+        });
+}
+</script>

@@ -140,7 +140,7 @@ def my_products():
 @login_required
 def create_product():
     if not current_user.is_seller:
-        flash('You must be a seller to create products')
+        flash('You must be a seller to create products', 'warning') 
         return redirect(url_for('index.index'))
     
     categories = User.get_categories()
@@ -158,7 +158,6 @@ def create_product():
             price = float(price)
             quantity = int(quantity)
             
-            # Create the product
             product_id = User.add_product(
                 category_id=category_id,
                 name=name,
@@ -170,14 +169,17 @@ def create_product():
             )
             
             if product_id:
-                flash('Product created successfully!')
+                flash('Product created successfully!', 'success')  
                 return redirect(url_for('users.sales'))
             else:
-                flash('Failed to create product')
+                flash('Failed to create product', 'danger')  
+                return redirect(url_for('users.create_product'))
         except ValueError:
-            flash('Invalid input. Please check your entries.')
+            flash('Invalid input. Please check your entries.', 'warning') 
+            return render_template('create_product.html', categories=categories)
         except Exception as e:
-            flash(str(e))
+            flash(str(e), 'danger')  
+            return redirect(url_for('users.sales'))
     
     return render_template('create_product.html', categories=categories)
 
@@ -224,12 +226,12 @@ def edit_product(product_id):
                     product_id,
                     quantity
                 )
-                flash('Product updated successfully!')
+                flash('Product updated successfully!', 'success')
                 return redirect(url_for('users.sales'))
             else:
                 flash('Failed to update product')
         except ValueError:
-            flash('Invalid input. Please check your entries.')
+            flash('Invalid input. Please check your entries.', 'danger')
         except Exception as e:
             flash(str(e))
     
@@ -330,13 +332,13 @@ def remove_from_inventory():
     try:
         product_id = int(product_id)
         if User.remove_from_inventory(current_user.user_id, product_id, delete_product):
-            flash('Product removed from inventory successfully!')
+            flash('Product removed from inventory successfully!', 'success')
         else:
-            flash('Failed to remove product from inventory')
+            flash('Failed to remove product from inventory', 'danger')
     except ValueError:
-        flash('Invalid product ID')
+        flash('Invalid product ID', 'danger')
     except Exception as e:
-        flash(str(e))
+        flash(str(e), 'danger')
     
     return redirect(url_for('users.sales', tab='products'))
 
@@ -386,31 +388,31 @@ def get_buyer_details(buyer_id):
         return jsonify({'error': f'Failed to fetch buyer details: {str(e)}'}), 500
 
 def get_recent_reviews_by_user_id_from_csv(user_id):
-        reviews = []
-        try:
-            with open('reviews.csv', 'r') as file:
-                reader = csv.DictReader(file)
-                for row in reader:
-                    if row['user_id'] == str(user_id):
-                        reviews.append(row)
-        except FileNotFoundError:
-            pass
-        return reviews
+    reviews = []
+    try:
+        with open('reviews.csv', 'r') as file:
+            reader = csv.DictReader(file)
+            for row in reader:
+                if row['user_id'] == str(user_id):
+                    reviews.append(row)
+    except FileNotFoundError:
+        pass
+    return reviews
 
-    class UserReviewSearchForm(FlaskForm):
-        user_id = StringField('User ID', validators=[DataRequired()])
-        submit = SubmitField('Search Reviews')
+class UserReviewSearchForm(FlaskForm):
+    user_id = StringField('User ID', validators=[DataRequired()])
+    submit = SubmitField('Search Reviews')
 
-    class AccountUpdateForm(FlaskForm):
-        email = StringField('Email', validators=[DataRequired(), Email()])
-        full_name = StringField('Full Name', validators=[DataRequired()])
-        address = TextAreaField('Address', validators=[DataRequired()])
-        password = PasswordField('New Password', validators=[Optional()])
-        submit = SubmitField('Update Profile')
-        
-        def validate_email(self, email):
-            if email.data != current_user.email and User.email_exists(email.data):
-                raise ValidationError('Email already in use.')
+class AccountUpdateForm(FlaskForm):
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    full_name = StringField('Full Name', validators=[DataRequired()])
+    address = TextAreaField('Address', validators=[DataRequired()])
+    password = PasswordField('New Password', validators=[Optional()])
+    submit = SubmitField('Update Profile')
+    
+    def validate_email(self, email):
+        if email.data != current_user.email and User.email_exists(email.data):
+            raise ValidationError('Email already in use.')
 
 @bp.route('/my-account', methods=['GET', 'POST'])
 @login_required

@@ -9,14 +9,6 @@
         </a>
     </div>
 
-    {% with messages = get_flashed_messages() %}
-        {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-info">{{ message }}</div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
-
     <div class="row">
         {% for product in products %}
         <div class="col-md-4 mb-4">

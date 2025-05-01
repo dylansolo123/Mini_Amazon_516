@@ -220,31 +220,83 @@ ORDER BY review_date DESC
     @staticmethod
     def add_product(category_id, name, description, image_url, created_by, price, quantity):
         """
-        Add a new product and add it to seller's inventory
+        Add a new product and add it to seller's inventory.
+        Prevents adding duplicate products for the same seller.
         """
-        product_id = app.db.execute("""
-        INSERT INTO Products(category_id, name, description, image_url, created_by)
-        VALUES(:category_id, :name, :description, :image_url, :created_by)
-        RETURNING product_id
-        """, 
-        category_id=category_id,
-        name=name,
-        description=description,
-        image_url=image_url,
-        created_by=created_by)
+        try:
+            existing_product = app.db.execute("""
+            SELECT p.product_id 
+            FROM Products p
+            JOIN Seller_Inventory si ON p.product_id = si.product_id
+            WHERE LOWER(p.name) = LOWER(:name) 
+            AND si.seller_id = :seller_id
+            """,
+            name=name,
+            seller_id=created_by)
+            
+            if existing_product:
+                raise Exception("This product already exists in your inventory!")
+                        
+            app.db.execute("BEGIN")
+            
+            product_id = app.db.execute("""
+            INSERT INTO Products(category_id, name, description, image_url, created_by)
+            VALUES(:category_id, :name, :description, :image_url, :created_by)
+            RETURNING product_id
+            """, 
+            category_id=category_id,
+            name=name,
+            description=description,
+            image_url=image_url,
+            created_by=created_by)
+            
+            product_id = product_id[0][0]
+            
+            app.db.execute("""
+            INSERT INTO Seller_Inventory(seller_id, product_id, price, quantity)
+            VALUES(:seller_id, :product_id, :price, :quantity)
+            """,
+            seller_id=created_by,
+            product_id=product_id,
+            price=price,
+            quantity=quantity)
+            
+            app.db.execute("COMMIT")
+            return product_id
+            
+        except Exception as e:
+            app.db.execute("ROLLBACK")
+            print(f"Error adding product: {str(e)}")
+            raise e
+
+    @staticmethod
+    def get_user_products(user_id):
+        """
+        Get all products created by a specific user with inventory information
+        """
+        rows = app.db.execute("""
+        SELECT p.product_id, p.category_id, p.name, p.description, p.image_url, p.created_by, 
+            pc.category_name, si.price, si.quantity as available_quantity
+        FROM Products p
+        JOIN Product_Categories pc ON p.category_id = pc.category_id
+        LEFT JOIN Seller_Inventory si ON p.product_id = si.product_id AND si.seller_id = p.created_by
+        WHERE p.created_by = :user_id
+        """, user_id=user_id)
         
-        product_id = product_id[0][0]
-        
-        app.db.execute("""
-        INSERT INTO Seller_Inventory(seller_id, product_id, price, quantity)
-        VALUES(:seller_id, :product_id, :price, :quantity)
-        """,
-        seller_id=created_by,
-        product_id=product_id,
-        price=price,
-        quantity=quantity)
-        
-        return product_id
+        return [
+            {
+                'id': row[0],  # Use 'id' to match what your template expects
+                'product_id': row[0],
+                'category_id': row[1],
+                'name': row[2],
+                'description': row[3],
+                'image_url': row[4],
+                'created_by': row[5],
+                'category_name': row[6],
+                'price': row[7],
+                'available_quantity': row[8] or 0
+            } for row in rows
+        ]
 
     @staticmethod
     def update_inventory_quantity(seller_id, product_id, new_quantity):

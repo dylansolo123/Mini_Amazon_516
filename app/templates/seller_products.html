@@ -1,8 +1,21 @@
-{% extends "base.html" %}
-
-{% block content %}
-<div class="container mt-4">
+<div class="tab-pane fade show active" id="products" role="tabpanel" aria-labelledby="products-tab">
     <h2>Products for Sale</h2>
+
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">Sales Dashboard</h4>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <canvas id="quantityChart" width="400" height="300"></canvas>
+                </div>
+                <div class="col-md-6">
+                    <canvas id="salesChart" width="400" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
     
     <div class="table-responsive mb-4">
         <table class="table table-striped">
@@ -60,114 +73,25 @@
     <div class="mb-4">
         <a href="{{ url_for('users.create_product') }}" class="btn btn-primary">Add New Product</a>
     </div>
-
-    <h2>Orders to Fulfill</h2>
-    
-    <div class="mb-3">
-        <form class="form-inline" method="get">
-            <div class="input-group">
-                <input type="text" class="form-control" name="search" 
-                       placeholder="Search orders..." value="{{ request.args.get('search', '') }}">
-                <div class="input-group-append">
-                    <button class="btn btn-outline-secondary" type="submit">Search</button>
-                </div>
-            </div>
-        </form>
-    </div>
-
-    {% for order in orders %}
-    <div class="card mb-3">
-        <div class="card-header">
-            <div class="row">
-                <div class="col">
-                    <h5 class="mb-0">Order #{{ order.order_id }}</h5>
-                </div>
-                <div class="col text-right">
-                    <span class="badge badge-{{ 'success' if order.status == 'Fulfilled' 
-                                               else 'warning' if order.status == 'Partially Fulfilled' 
-                                               else 'secondary' }}">
-                        {{ order.status }}
-                    </span>
-                </div>
-            </div>
-        </div>
-        <div class="card-body">
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <p class="mb-1"><strong>Buyer:</strong> {{ order.buyer_name }}</p>
-                    <p class="mb-1"><strong>Address:</strong> {{ order.buyer_address }}</p>
-                    <p class="mb-1"><strong>Order Date:</strong> {{ order.order_date.strftime('%Y-%m-%d %H:%M:%S') }}</p>
-                </div>
-                <div class="col-md-6 text-md-right">
-                    <p class="mb-1"><strong>Total Items:</strong> {{ order.total_items }}</p>
-                    <p class="mb-1"><strong>Fulfilled Items:</strong> {{ order.fulfilled_items }}</p>
-                    <p class="mb-1"><strong>Total Amount:</strong> ${{ "%.2f"|format(order.seller_total) }}</p>
-                </div>
-            </div>
-
-            <div class="table-responsive">
-                <table class="table table-sm">
-                    <thead>
-                        <tr>
-                            <th>Product</th>
-                            <th>Quantity</th>
-                            <th>Price</th>
-                            <th>Subtotal</th>
-                            <th>Status</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for item in order.order_items %}
-                        <tr>
-                            <td>{{ item.product_name }}</td>
-                            <td>{{ item.quantity }}</td>
-                            <td>${{ "%.2f"|format(item.unit_price) }}</td>
-                            <td>${{ "%.2f"|format(item.subtotal) }}</td>
-                            <td>
-                                <span class="badge badge-{{ 'success' if item.status == 'Fulfilled' else 'secondary' }}">
-                                    {{ item.status }}
-                                </span>
-                            </td>
-                            <td>
-                                {% if item.status != 'Fulfilled' %}
-                                <form action="{{ url_for('users.fulfill_order_item') }}" method="post" class="d-inline">
-                                    <input type="hidden" name="order_item_id" value="{{ item.order_item_id }}">
-                                    <button type="submit" class="btn btn-sm btn-success">Mark Fulfilled</button>
-                                </form>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-    {% endfor %}
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Edit button click handler
     document.querySelectorAll('.edit-btn').forEach(button => {
         button.addEventListener('click', function() {
             const productId = this.dataset.productId;
             
-            // Hide display elements and show edit inputs
             document.getElementById(`name-${productId}`).classList.add('d-none');
             document.getElementById(`name-edit-${productId}`).classList.remove('d-none');
             document.getElementById(`price-${productId}`).classList.add('d-none');
             document.getElementById(`price-edit-${productId}`).classList.remove('d-none');
             
-            // Show save and cancel buttons, hide edit button
             this.classList.add('d-none');
             this.parentElement.querySelector('.save-btn').classList.remove('d-none');
             this.parentElement.querySelector('.cancel-btn').classList.remove('d-none');
         });
     });
 
-    // Save button click handler
     document.querySelectorAll('.save-btn').forEach(button => {
         button.addEventListener('click', function() {
             const productId = this.dataset.productId;
@@ -186,12 +110,10 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // Update display values
                     document.getElementById(`name-${productId}`).textContent = nameInput.value;
                     document.getElementById(`price-${productId}`).textContent = 
                         '$' + parseFloat(priceInput.value).toFixed(2);
                     
-                    // Reset display
                     toggleEditMode(productId, false);
                 } else {
                     alert(data.message || 'Failed to update product');
@@ -204,18 +126,15 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Cancel button click handler
     document.querySelectorAll('.cancel-btn').forEach(button => {
         button.addEventListener('click', function() {
             const productId = this.dataset.productId;
             
-            // Reset input values to original
             const nameInput = document.getElementById(`name-edit-${productId}`);
             const priceInput = document.getElementById(`price-edit-${productId}`);
             nameInput.value = document.getElementById(`name-${productId}`).textContent;
             priceInput.value = document.getElementById(`price-${productId}`).textContent.replace('$', '');
             
-            // Reset display
             toggleEditMode(productId, false);
         });
     });
@@ -247,6 +166,96 @@ document.addEventListener('DOMContentLoaded', function() {
             cancelBtn.classList.add('d-none');
         }
     }
+
+    if (document.getElementById('quantityChart') && document.getElementById('salesChart')) {
+        const productStats = JSON.parse('{{ product_stats|tojson|safe }}');
+        
+        if (productStats && productStats.length > 0) {
+            const productNames = productStats.map(item => item.product_name);
+            const currentQuantities = productStats.map(item => item.current_quantity);
+            const quantitiesSold = productStats.map(item => item.quantity_sold);
+            const totalSales = productStats.map(item => item.total_sales);
+            
+            const quantityCtx = document.getElementById('quantityChart').getContext('2d');
+            const quantityChart = new Chart(quantityCtx, {
+                type: 'bar',
+                data: {
+                    labels: productNames,
+                    datasets: [
+                        {
+                            label: 'Current Inventory',
+                            data: currentQuantities,
+                            backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Quantity Sold',
+                            data: quantitiesSold,
+                            backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Inventory vs. Sales Quantity'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Quantity'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            const salesCtx = document.getElementById('salesChart').getContext('2d');
+            const salesChart = new Chart(salesCtx, {
+                type: 'bar',
+                data: {
+                    labels: productNames,
+                    datasets: [{
+                        label: 'Total Sales ($)',
+                        data: totalSales,
+                        backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Total Sales Revenue by Product'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Sales Amount ($)'
+                            }
+                        }
+                    }
+                }
+            });
+        } else {
+            document.getElementById('quantityChart').insertAdjacentHTML('beforeend', 
+                '<div class="text-center my-5"><em>No sales data available</em></div>');
+            document.getElementById('salesChart').insertAdjacentHTML('beforeend', 
+                '<div class="text-center my-5"><em>No sales data available</em></div>');
+        }
+    }
 });
 </script>
-{% endblock %}

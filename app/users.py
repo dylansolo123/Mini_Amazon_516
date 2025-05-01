@@ -79,11 +79,17 @@ def sales():
     if not current_user.is_seller:
         return redirect(url_for('index.index')) 
     
+    active_tab = request.args.get('tab', 'products')
+    
     search_term = request.args.get('search', '')
     inventory_items = current_user.get_seller_inventory()
-    seller_orders = User.get_seller_orders(current_user.user_id)
     
-    if search_term:
+    seller_id = current_user.user_id
+    
+    seller_orders = User.get_seller_orders(seller_id)
+    product_stats = User.get_product_sales_stats(seller_id)
+    
+    if search_term and active_tab == 'orders':
         filtered_orders = []
         for order in seller_orders:
             if (search_term.lower() in str(order['order_id']).lower() or
@@ -92,9 +98,33 @@ def sales():
                 filtered_orders.append(order)
         seller_orders = filtered_orders
     
-    return render_template('seller_products.html', 
+    ratings_data = None
+    top_buyers = None
+    buyer_data = None
+    
+    if active_tab == 'analytics':
+        try:
+                        
+            ratings_data = User.get_seller_ratings_distribution(seller_id)
+            
+            top_buyers = User.get_top_buyers(seller_id, limit=5)
+            
+            buyer_data = User.get_buyer_engagement_data(seller_id)
+            
+        except Exception as e:
+            print(f"Error in analytics tab: {str(e)}")
+            ratings_data = {'one_star': 0, 'two_star': 0, 'three_star': 0, 'four_star': 0, 'five_star': 0}
+            top_buyers = []
+            buyer_data = []
+    
+    return render_template('seller_dashboard.html', 
+                          active_tab=active_tab,
                           inventory_items=inventory_items,
-                          orders=seller_orders)
+                          orders=seller_orders,
+                          product_stats=product_stats,
+                          ratings_data=ratings_data,
+                          top_buyers=top_buyers,
+                          buyer_data=buyer_data)
 
 @bp.route('/my-products')
 @login_required
@@ -110,7 +140,7 @@ def my_products():
 @login_required
 def create_product():
     if not current_user.is_seller:
-        flash('You must be a seller to create products')
+        flash('You must be a seller to create products', 'warning') 
         return redirect(url_for('index.index'))
     
     categories = User.get_categories()
@@ -128,7 +158,6 @@ def create_product():
             price = float(price)
             quantity = int(quantity)
             
-            # Create the product
             product_id = User.add_product(
                 category_id=category_id,
                 name=name,
@@ -140,14 +169,17 @@ def create_product():
             )
             
             if product_id:
-                flash('Product created successfully!')
+                flash('Product created successfully!', 'success')  
                 return redirect(url_for('users.sales'))
             else:
-                flash('Failed to create product')
+                flash('Failed to create product', 'danger')  
+                return redirect(url_for('users.create_product'))
         except ValueError:
-            flash('Invalid input. Please check your entries.')
+            flash('Invalid input. Please check your entries.', 'warning') 
+            return render_template('create_product.html', categories=categories)
         except Exception as e:
-            flash(str(e))
+            flash(str(e), 'danger')  
+            return redirect(url_for('users.sales'))
     
     return render_template('create_product.html', categories=categories)
 
@@ -194,12 +226,12 @@ def edit_product(product_id):
                     product_id,
                     quantity
                 )
-                flash('Product updated successfully!')
+                flash('Product updated successfully!', 'success')
                 return redirect(url_for('users.sales'))
             else:
                 flash('Failed to update product')
         except ValueError:
-            flash('Invalid input. Please check your entries.')
+            flash('Invalid input. Please check your entries.', 'danger')
         except Exception as e:
             flash(str(e))
     
@@ -257,7 +289,7 @@ def fulfill_order_item():
     except Exception as e:
         flash(str(e))
     
-    return redirect(url_for('users.sales'))
+    return redirect(url_for('users.sales', tab='orders'))
 
 @bp.route('/update_inventory_quantity', methods=['POST'])
 @login_required
@@ -286,7 +318,7 @@ def update_inventory_quantity():
     except Exception as e:
         flash(str(e))
     
-    return redirect(url_for('users.sales'))
+    return redirect(url_for('users.sales', tab='products'))
 
 @bp.route('/remove_from_inventory', methods=['POST'])
 @login_required
@@ -300,15 +332,60 @@ def remove_from_inventory():
     try:
         product_id = int(product_id)
         if User.remove_from_inventory(current_user.user_id, product_id, delete_product):
-            flash('Product removed from inventory successfully!')
+            flash('Product removed from inventory successfully!', 'success')
         else:
-            flash('Failed to remove product from inventory')
+            flash('Failed to remove product from inventory', 'danger')
     except ValueError:
-        flash('Invalid product ID')
+        flash('Invalid product ID', 'danger')
     except Exception as e:
-        flash(str(e))
+        flash(str(e), 'danger')
     
-    return redirect(url_for('users.sales'))
+    return redirect(url_for('users.sales', tab='products'))
+
+@bp.route('/get-buyer-details/<int:buyer_id>')
+@login_required
+def get_buyer_details(buyer_id):
+    if not current_user.is_seller:
+        return jsonify({'error': 'Unauthorized access'}), 403
+    
+    try:
+        
+        user = User.get(buyer_id)
+        if not user:
+            return jsonify({'error': 'Buyer not found in the system'}), 404
+            
+        print(f"Found buyer in database: {user.full_name}")
+        
+        buyer = User.get_buyer_info(current_user.user_id, buyer_id)
+        if not buyer:
+            buyer = {
+                'user_id': user.id,
+                'email': user.email,
+                'full_name': user.full_name,
+                'order_count': 0,
+                'total_spent': 0.0,
+                'last_order_date': None,
+                'avg_rating': None
+            }
+        
+        orders = User.get_buyer_orders(current_user.user_id, buyer_id) or []
+        
+        reviews = User.get_buyer_reviews(current_user.user_id, buyer_id) or []
+        
+        messages = User.get_buyer_messages(current_user.user_id, buyer_id) or []
+        
+        return jsonify({
+            'buyer': buyer,
+            'orders': orders,
+            'reviews': reviews,
+            'messages': messages
+        })
+        
+    except Exception as e:
+        print(f"Error getting buyer details: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'Failed to fetch buyer details: {str(e)}'}), 500
 
 def get_recent_reviews_by_user_id_from_csv(user_id):
     reviews = []

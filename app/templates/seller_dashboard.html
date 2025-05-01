@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    
+    <ul class="nav nav-tabs mb-4" id="sellerTabs" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link {% if active_tab == 'products' %}active{% endif %}" 
+               href="{{ url_for('users.sales', tab='products') }}">
+               <i class="fas fa-box mr-2"></i>Products for Sale
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if active_tab == 'orders' %}active{% endif %}" 
+               href="{{ url_for('users.sales', tab='orders') }}">
+               <i class="fas fa-shipping-fast mr-2"></i>Orders to Fulfill
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if active_tab == 'analytics' %}active{% endif %}" 
+               href="{{ url_for('users.sales', tab='analytics') }}">
+               <i class="fas fa-chart-line mr-2"></i>Buyer Analytics
+            </a>
+        </li>
+    </ul>
+    
+    <div class="tab-content" id="sellerTabsContent">
+        {% if active_tab == 'products' %}
+            {% include 'seller_products.html' %}
+        {% elif active_tab == 'orders' %}
+            {% include 'seller_orders.html' %}
+        {% elif active_tab == 'analytics' %}
+            {% include 'seller_analytics.html' %}
+        {% endif %}
+    </div>
+</div>
+
+<style>
+  .nav-tabs {
+    border-bottom: 2px solid #6c757d;
+  }
+  
+  .nav-tabs .nav-link {
+    border: none;
+    color: #6c757d;
+    font-weight: 500;
+    padding: 10px 20px;
+    border-radius: 4px 4px 0 0;
+    margin-right: 5px;
+  }
+  
+  .nav-tabs .nav-link.active {
+    color: #007bff;
+    background-color: #fff;
+    border-bottom: 3px solid #000;
+  }
+  
+  .nav-tabs .nav-link:hover:not(.active) {
+    background-color: #f8f9fa;
+    color: #007bff;
+  }
+  
+  .tab-content {
+    padding-top: 20px;
+  }
+  
+  .tab-pane {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  .message-history {
+        max-height: 300px;
+        overflow-y: auto;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        background-color: #f9f9f9;
+        margin-bottom: 20px;
+    }
+
+    .message-bubble {
+        margin-bottom: 15px;
+        display: flex;
+    }
+
+    .seller-message {
+        justify-content: flex-end;
+    }
+
+    .buyer-message {
+        justify-content: flex-start;
+    }
+
+    .message-content {
+        max-width: 70%;
+        padding: 10px;
+        border-radius: 10px;
+        position: relative;
+    }
+
+    .seller-message .message-content {
+        background-color: #dcf8c6;
+        margin-left: auto;
+    }
+
+    .buyer-message .message-content {
+        background-color: #f1f0f0;
+        margin-right: auto;
+    }
+
+    .message-content p {
+        margin-bottom: 5px;
+    }
+
+    .message-content small {
+        display: block;
+        text-align: right;
+        font-size: 0.7rem;
+    }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}

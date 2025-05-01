@@ -457,6 +457,10 @@ def my_account():
     # Get user's reviews
     reviews = Review.get_user_reviews(current_user.id)
 
+    form.email.data = current_user.email
+    form.full_name.data = current_user.full_name
+    form.address.data = current_user.address
+
     return render_template(
         'myaccount.html',
         title='My Account',

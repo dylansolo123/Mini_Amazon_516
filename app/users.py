@@ -83,6 +83,8 @@ def sales():
     inventory_items = current_user.get_seller_inventory()
     seller_orders = User.get_seller_orders(current_user.user_id)
     
+    product_stats = User.get_product_sales_stats(current_user.user_id)
+    
     if search_term:
         filtered_orders = []
         for order in seller_orders:
@@ -94,7 +96,8 @@ def sales():
     
     return render_template('seller_products.html', 
                           inventory_items=inventory_items,
-                          orders=seller_orders)
+                          orders=seller_orders,
+                          product_stats=product_stats)
 
 @bp.route('/my-products')
 @login_required

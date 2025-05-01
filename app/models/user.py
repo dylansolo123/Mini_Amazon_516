@@ -460,3 +460,37 @@ ORDER BY review_date DESC
         except Exception as e:
             print(str(e))
             return False
+    
+    @staticmethod
+    def get_product_sales_stats(seller_id):
+        """
+        Get sales statistics for products sold by this seller
+        """
+        try:
+            rows = app.db.execute("""
+            SELECT p.product_id, 
+                p.name AS product_name, 
+                si.quantity AS current_quantity,
+                COALESCE(SUM(oi.quantity), 0) AS quantity_sold,
+                COALESCE(SUM(oi.quantity * oi.unit_price), 0) AS total_sales
+            FROM Seller_Inventory si
+            JOIN Products p ON si.product_id = p.product_id
+            LEFT JOIN Order_Items oi ON oi.product_id = si.product_id 
+                                    AND oi.seller_id = si.seller_id
+            WHERE si.seller_id = :seller_id
+            GROUP BY p.product_id, p.name, si.quantity
+            ORDER BY total_sales DESC
+            """, seller_id=seller_id)
+            
+            return [
+                {
+                    'product_id': row[0],
+                    'product_name': row[1],
+                    'current_quantity': row[2],
+                    'quantity_sold': row[3],
+                    'total_sales': row[4]
+                } for row in rows
+            ]
+        except Exception as e:
+            print(str(e))
+            return []

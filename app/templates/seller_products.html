@@ -20,6 +20,22 @@
     <div class="tab-content" id="sellerTabsContent">
         <div class="tab-pane fade show active" id="products" role="tabpanel" aria-labelledby="products-tab">
             <h2>Products for Sale</h2>
+
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Sales Dashboard</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <canvas id="quantityChart" width="400" height="300"></canvas>
+                        </div>
+                        <div class="col-md-6">
+                            <canvas id="salesChart" width="400" height="300"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
             
             <div class="table-responsive mb-4">
                 <table class="table table-striped">
@@ -207,6 +223,8 @@
   }
 </style>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Need to bring in to create charts -->
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.edit-btn').forEach(button => {
@@ -299,8 +317,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Preserve active tab on page reload using URL hash
-    // Switch to tab based on URL hash if present
     const hash = window.location.hash;
     if (hash) {
         const tab = document.querySelector(`a[href="${hash}"]`);
@@ -309,10 +325,100 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Update URL hash when tabs change
     $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
         history.pushState(null, null, $(this).attr('href'));
     });
+
+    if (document.getElementById('quantityChart') && document.getElementById('salesChart')) {
+        const productStats = JSON.parse('{{ product_stats|tojson|safe }}');
+        /*pull product stats + create chart using library*/
+        if (productStats && productStats.length > 0) {
+            const productNames = productStats.map(item => item.product_name);
+            const currentQuantities = productStats.map(item => item.current_quantity);
+            const quantitiesSold = productStats.map(item => item.quantity_sold);
+            const totalSales = productStats.map(item => item.total_sales);
+            
+            const quantityCtx = document.getElementById('quantityChart').getContext('2d');
+            const quantityChart = new Chart(quantityCtx, {
+                type: 'bar',
+                data: {
+                    labels: productNames,
+                    datasets: [
+                        {
+                            label: 'Current Inventory',
+                            data: currentQuantities,
+                            backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Quantity Sold',
+                            data: quantitiesSold,
+                            backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Inventory vs. Sales Quantity'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Quantity'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            const salesCtx = document.getElementById('salesChart').getContext('2d');
+            const salesChart = new Chart(salesCtx, {
+                type: 'bar',
+                data: {
+                    labels: productNames,
+                    datasets: [{
+                        label: 'Total Sales ($)',
+                        data: totalSales,
+                        backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Total Sales Revenue by Product'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Sales Amount ($)'
+                            }
+                        }
+                    }
+                }
+            });
+        } else {
+            document.getElementById('quantityChart').insertAdjacentHTML('beforeend', 
+                '<div class="text-center my-5"><em>No sales data available</em></div>');
+            document.getElementById('salesChart').insertAdjacentHTML('beforeend', 
+                '<div class="text-center my-5"><em>No sales data available</em></div>');
+        }
+    }
 });
 </script>
 {% endblock %}

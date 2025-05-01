@@ -436,7 +436,7 @@ def my_account():
             flash('Please enter a valid user ID', 'error')
 
     if form.validate_on_submit():
-        if User.update_profile(
+        if User.update_info(
             current_user.id,
             form.email.data,
             form.full_name.data,

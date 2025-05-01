@@ -1,0 +1,270 @@
+<div class="tab-pane fade show active" id="orders" role="tabpanel" aria-labelledby="orders-tab">
+    <h2>Orders to Fulfill</h2>
+    
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">Order Fulfillment Dashboard</h4>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5 class="text-center">Order Status</h5>
+                    <canvas id="orderStatusChart" width="400" height="300"></canvas>
+                </div>
+                <div class="col-md-6">
+                    <h5 class="text-center">Item Fulfillment Status</h5>
+                    <canvas id="itemFulfillmentChart" width="400" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="mb-3">
+        <form class="form-inline" method="get">
+            <div class="input-group">
+                <input type="text" class="form-control" name="search" 
+                       placeholder="Search orders..." value="{{ request.args.get('search', '') }}">
+                <div class="input-group-append">
+                    <button class="btn btn-outline-secondary" type="submit">Search</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    {% for order in orders %}
+    <div class="card mb-3">
+        <div class="card-header">
+            <div class="row">
+                <div class="col">
+                    <h5 class="mb-0">Order #{{ order.order_id }}</h5>
+                </div>
+                <div class="col text-right">
+                    <span class="badge badge-{{ 'success' if order.status == 'Fulfilled' 
+                                               else 'warning' if order.status == 'Partially Fulfilled' 
+                                               else 'secondary' }}">
+                        {{ order.status }}
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <p class="mb-1"><strong>Buyer:</strong> {{ order.buyer_name }}</p>
+                    <p class="mb-1"><strong>Address:</strong> {{ order.buyer_address }}</p>
+                    <p class="mb-1"><strong>Order Date:</strong> {{ order.order_date.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                </div>
+                <div class="col-md-6 text-md-right">
+                    <p class="mb-1"><strong>Total Items:</strong> {{ order.total_items }}</p>
+                    <p class="mb-1"><strong>Fulfilled Items:</strong> {{ order.fulfilled_items }}</p>
+                    <p class="mb-1"><strong>Total Amount:</strong> ${{ "%.2f"|format(order.seller_total) }}</p>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Quantity</th>
+                            <th>Price</th>
+                            <th>Subtotal</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in order.order_items %}
+                        <tr>
+                            <td>{{ item.product_name }}</td>
+                            <td>{{ item.quantity }}</td>
+                            <td>${{ "%.2f"|format(item.unit_price) }}</td>
+                            <td>${{ "%.2f"|format(item.subtotal) }}</td>
+                            <td>
+                                <span class="badge badge-{{ 'success' if item.status == 'Fulfilled' else 'secondary' }}">
+                                    {{ item.status }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if item.status != 'Fulfilled' %}
+                                <form action="{{ url_for('users.fulfill_order_item') }}" method="post" class="d-inline">
+                                    <input type="hidden" name="order_item_id" value="{{ item.order_item_id }}">
+                                    <button type="submit" class="btn btn-sm btn-success">Mark Fulfilled</button>
+                                </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (document.getElementById('orderStatusChart') && document.getElementById('itemFulfillmentChart')) {
+        const orders = JSON.parse('{{ orders|tojson|safe }}');
+        
+        if (orders && orders.length > 0) {
+            const statusCounts = {
+                'Pending': 0,
+                'Partially Fulfilled': 0,
+                'Fulfilled': 0
+            };
+            
+            const itemStatusCounts = {};
+            let totalItems = 0;
+            
+            orders.forEach(order => {
+                if (statusCounts.hasOwnProperty(order.status)) {
+                    statusCounts[order.status]++;
+                }
+                
+                if (order.order_items && order.order_items.length > 0) {
+                    order.order_items.forEach(item => {
+                        const status = item.status || 'Unknown';
+                        if (!itemStatusCounts[status]) {
+                            itemStatusCounts[status] = 0;
+                        }
+                        itemStatusCounts[status] += parseInt(item.quantity);
+                        totalItems += parseInt(item.quantity);
+                    });
+                }
+            });
+            
+            const statuses = Object.keys(statusCounts);
+            const counts = Object.values(statusCounts);
+            const total = counts.reduce((sum, count) => sum + count, 0);
+            
+            const backgroundColors = [
+                'rgba(255, 99, 132, 0.5)', 
+                'rgba(255, 205, 86, 0.5)', 
+                'rgba(75, 192, 192, 0.5)'   
+            ];
+            
+            const borderColors = [
+                'rgb(255, 99, 132)',
+                'rgb(255, 205, 86)',
+                'rgb(75, 192, 192)'
+            ];
+            
+            const orderCtx = document.getElementById('orderStatusChart').getContext('2d');
+            new Chart(orderCtx, {
+                type: 'bar',
+                data: {
+                    labels: statuses,
+                    datasets: [{
+                        label: 'Number of Orders',
+                        data: counts,
+                        backgroundColor: backgroundColors,
+                        borderColor: borderColors,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    animation: {
+                        duration: 500 
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: `Order Status Overview (Total: ${total} orders)`
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.raw;
+                                    const percentage = Math.round((value / total) * 100);
+                                    return `${value} orders (${percentage}%)`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Number of Orders'
+                            },
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+            
+            const itemStatuses = Object.keys(itemStatusCounts);
+            const itemCounts = Object.values(itemStatusCounts);
+            
+            const statusColors = {
+                'Fulfilled': ['rgba(75, 192, 192, 0.5)', 'rgb(75, 192, 192)'],
+                'Processing': ['rgba(255, 205, 86, 0.5)', 'rgb(255, 205, 86)'],
+                'Pending': ['rgba(255, 99, 132, 0.5)', 'rgb(255, 99, 132)'],
+                'Unknown': ['rgba(201, 203, 207, 0.5)', 'rgb(201, 203, 207)']
+            };
+            
+            const itemBackgroundColors = [];
+            const itemBorderColors = [];
+            
+            itemStatuses.forEach(status => {
+                if (statusColors[status]) {
+                    itemBackgroundColors.push(statusColors[status][0]);
+                    itemBorderColors.push(statusColors[status][1]);
+                } else {
+                    itemBackgroundColors.push('rgba(153, 102, 255, 0.5)');
+                    itemBorderColors.push('rgb(153, 102, 255)');
+                }
+            });
+            
+            const itemFulfillmentCtx = document.getElementById('itemFulfillmentChart').getContext('2d');
+            new Chart(itemFulfillmentCtx, {
+                type: 'pie',
+                data: {
+                    labels: itemStatuses,
+                    datasets: [{
+                        data: itemCounts,
+                        backgroundColor: itemBackgroundColors,
+                        borderColor: itemBorderColors,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    animation: {
+                        duration: 500
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: `Item Fulfillment Status (Total: ${totalItems} items)`
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.raw;
+                                    const percentage = Math.round((value / totalItems) * 100);
+                                    return `${value} items (${percentage}%)`;
+                                }
+                            }
+                        },
+                        legend: {
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+        } else {
+            document.getElementById('orderStatusChart').innerHTML = 
+                '<div class="text-center my-5"><em>No orders available</em></div>';
+            document.getElementById('itemFulfillmentChart').innerHTML = 
+                '<div class="text-center my-5"><em>No items available</em></div>';
+        }
+    }
+});
+</script>

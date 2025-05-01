@@ -79,13 +79,14 @@ def sales():
     if not current_user.is_seller:
         return redirect(url_for('index.index')) 
     
+    active_tab = request.args.get('tab', 'products')
+    
     search_term = request.args.get('search', '')
     inventory_items = current_user.get_seller_inventory()
     seller_orders = User.get_seller_orders(current_user.user_id)
-    
     product_stats = User.get_product_sales_stats(current_user.user_id)
     
-    if search_term:
+    if search_term and active_tab == 'orders':
         filtered_orders = []
         for order in seller_orders:
             if (search_term.lower() in str(order['order_id']).lower() or
@@ -94,7 +95,8 @@ def sales():
                 filtered_orders.append(order)
         seller_orders = filtered_orders
     
-    return render_template('seller_products.html', 
+    return render_template('seller_dashboard.html', 
+                          active_tab=active_tab,
                           inventory_items=inventory_items,
                           orders=seller_orders,
                           product_stats=product_stats)
@@ -260,7 +262,7 @@ def fulfill_order_item():
     except Exception as e:
         flash(str(e))
     
-    return redirect(url_for('users.sales'))
+    return redirect(url_for('users.sales', tab='orders'))
 
 @bp.route('/update_inventory_quantity', methods=['POST'])
 @login_required
@@ -289,7 +291,7 @@ def update_inventory_quantity():
     except Exception as e:
         flash(str(e))
     
-    return redirect(url_for('users.sales'))
+    return redirect(url_for('users.sales', tab='products'))
 
 @bp.route('/remove_from_inventory', methods=['POST'])
 @login_required
@@ -311,7 +313,7 @@ def remove_from_inventory():
     except Exception as e:
         flash(str(e))
     
-    return redirect(url_for('users.sales'))
+    return redirect(url_for('users.sales', tab='products'))
 
 def get_recent_reviews_by_user_id_from_csv(user_id):
     reviews = []

@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <ul class="nav nav-tabs mb-4" id="sellerTabs" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link {% if active_tab == 'products' %}active{% endif %}" 
+               href="{{ url_for('users.sales', tab='products') }}">
+               <i class="fas fa-box mr-2"></i>Products for Sale
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if active_tab == 'orders' %}active{% endif %}" 
+               href="{{ url_for('users.sales', tab='orders') }}">
+               <i class="fas fa-shipping-fast mr-2"></i>Orders to Fulfill
+            </a>
+        </li>
+    </ul>
+    
+    <div class="tab-content" id="sellerTabsContent">
+        {% if active_tab == 'products' %}
+            {% include 'seller_products.html' %}
+        {% elif active_tab == 'orders' %}
+            {% include 'seller_orders.html' %}
+        {% endif %}
+    </div>
+</div>
+
+<style>
+  .nav-tabs {
+    border-bottom: 2px solid #6c757d;
+  }
+  
+  .nav-tabs .nav-link {
+    border: none;
+    color: #6c757d;
+    font-weight: 500;
+    padding: 10px 20px;
+    border-radius: 4px 4px 0 0;
+    margin-right: 5px;
+  }
+  
+  .nav-tabs .nav-link.active {
+    color: #007bff;
+    background-color: #fff;
+    border-bottom: 3px solid #000;
+  }
+  
+  .nav-tabs .nav-link:hover:not(.active) {
+    background-color: #f8f9fa;
+    color: #007bff;
+  }
+  
+  .tab-content {
+    padding-top: 20px;
+  }
+  
+  .tab-pane {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}

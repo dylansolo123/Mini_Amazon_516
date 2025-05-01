@@ -1,247 +1,79 @@
-{% extends "base.html" %}
+<div class="tab-pane fade show active" id="products" role="tabpanel" aria-labelledby="products-tab">
+    <h2>Products for Sale</h2>
 
-{% block content %}
-<div class="container mt-4">
-    <ul class="nav nav-tabs mb-4" id="sellerTabs" role="tablist">
-        <li class="nav-item">
-            <a class="nav-link active" id="products-tab" data-toggle="tab" href="#products" role="tab" 
-               aria-controls="products" aria-selected="true">
-               <i class="fas fa-box mr-2"></i>Products for Sale
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" id="orders-tab" data-toggle="tab" href="#orders" role="tab" 
-               aria-controls="orders" aria-selected="false">
-               <i class="fas fa-shipping-fast mr-2"></i>Orders to Fulfill
-            </a>
-        </li>
-    </ul>
-    
-    <div class="tab-content" id="sellerTabsContent">
-        <div class="tab-pane fade show active" id="products" role="tabpanel" aria-labelledby="products-tab">
-            <h2>Products for Sale</h2>
-
-            <div class="card mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">Sales Dashboard</h4>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <canvas id="quantityChart" width="400" height="300"></canvas>
-                        </div>
-                        <div class="col-md-6">
-                            <canvas id="salesChart" width="400" height="300"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="table-responsive mb-4">
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Product Name</th>
-                            <th>Price</th>
-                            <th>Quantity</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for item in inventory_items %}
-                        <tr>
-                            <td>
-                                <span class="product-name" id="name-{{ item.product_id }}">{{ item.product_name }}</span>
-                                <input type="text" class="form-control d-none name-edit" 
-                                       id="name-edit-{{ item.product_id }}" 
-                                       value="{{ item.product_name }}">
-                            </td>
-                            <td>
-                                <span class="product-price" id="price-{{ item.product_id }}">${{ "%.2f"|format(item.price) }}</span>
-                                <input type="number" step="0.01" min="0.01" 
-                                       class="form-control d-none price-edit" 
-                                       id="price-edit-{{ item.product_id }}" 
-                                       value="{{ item.price }}">
-                            </td>
-                            <td>
-                                <form action="{{ url_for('users.update_inventory_quantity') }}" method="post" class="d-inline">
-                                    <input type="hidden" name="product_id" value="{{ item.product_id }}">
-                                    <input type="number" name="quantity" value="{{ item.quantity }}" 
-                                           min="0" class="form-control d-inline" style="width: 100px">
-                                    <button type="submit" class="btn btn-sm btn-secondary">Update</button>
-                                </form>
-                            </td>
-                            <td>
-                                <button class="btn btn-sm btn-primary edit-btn" 
-                                        data-product-id="{{ item.product_id }}">Edit</button>
-                                <button class="btn btn-sm btn-success save-btn d-none" 
-                                        data-product-id="{{ item.product_id }}">Save</button>
-                                <button class="btn btn-sm btn-danger cancel-btn d-none" 
-                                        data-product-id="{{ item.product_id }}">Cancel</button>
-                                <form action="{{ url_for('users.remove_from_inventory') }}" method="post" class="d-inline">
-                                    <input type="hidden" name="product_id" value="{{ item.product_id }}">
-                                    <input type="hidden" name="delete_product" value="true">
-                                    <button type="submit" class="btn btn-sm btn-danger">Remove</button>
-                                </form>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="mb-4">
-                <a href="{{ url_for('users.create_product') }}" class="btn btn-primary">Add New Product</a>
-            </div>
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">Sales Dashboard</h4>
         </div>
-        
-        <div class="tab-pane fade" id="orders" role="tabpanel" aria-labelledby="orders-tab">
-            <h2>Orders to Fulfill</h2>
-            
-            <div class="card mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">Order Fulfillment Dashboard</h4>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <canvas id="quantityChart" width="400" height="300"></canvas>
                 </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h5 class="text-center">Order Status</h5>
-                            <canvas id="orderStatusChart" width="400" height="300"></canvas>
-                        </div>
-                        <div class="col-md-6">
-                            <h5 class="text-center">Item Fulfillment Status</h5>
-                            <canvas id="itemFulfillmentChart" width="400" height="300"></canvas>
-                        </div>
-                    </div>
+                <div class="col-md-6">
+                    <canvas id="salesChart" width="400" height="300"></canvas>
                 </div>
             </div>
-            
-            <div class="mb-3">
-                <form class="form-inline" method="get">
-                    <div class="input-group">
-                        <input type="text" class="form-control" name="search" 
-                               placeholder="Search orders..." value="{{ request.args.get('search', '') }}">
-                        <div class="input-group-append">
-                            <button class="btn btn-outline-secondary" type="submit">Search</button>
-                        </div>
-                    </div>
-                </form>
-            </div>
-
-            {% for order in orders %}
-            <div class="card mb-3">
-                <div class="card-header">
-                    <div class="row">
-                        <div class="col">
-                            <h5 class="mb-0">Order #{{ order.order_id }}</h5>
-                        </div>
-                        <div class="col text-right">
-                            <span class="badge badge-{{ 'success' if order.status == 'Fulfilled' 
-                                                       else 'warning' if order.status == 'Partially Fulfilled' 
-                                                       else 'secondary' }}">
-                                {{ order.status }}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <p class="mb-1"><strong>Buyer:</strong> {{ order.buyer_name }}</p>
-                            <p class="mb-1"><strong>Address:</strong> {{ order.buyer_address }}</p>
-                            <p class="mb-1"><strong>Order Date:</strong> {{ order.order_date.strftime('%Y-%m-%d %H:%M:%S') }}</p>
-                        </div>
-                        <div class="col-md-6 text-md-right">
-                            <p class="mb-1"><strong>Total Items:</strong> {{ order.total_items }}</p>
-                            <p class="mb-1"><strong>Fulfilled Items:</strong> {{ order.fulfilled_items }}</p>
-                            <p class="mb-1"><strong>Total Amount:</strong> ${{ "%.2f"|format(order.seller_total) }}</p>
-                        </div>
-                    </div>
-
-                    <div class="table-responsive">
-                        <table class="table table-sm">
-                            <thead>
-                                <tr>
-                                    <th>Product</th>
-                                    <th>Quantity</th>
-                                    <th>Price</th>
-                                    <th>Subtotal</th>
-                                    <th>Status</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for item in order.order_items %}
-                                <tr>
-                                    <td>{{ item.product_name }}</td>
-                                    <td>{{ item.quantity }}</td>
-                                    <td>${{ "%.2f"|format(item.unit_price) }}</td>
-                                    <td>${{ "%.2f"|format(item.subtotal) }}</td>
-                                    <td>
-                                        <span class="badge badge-{{ 'success' if item.status == 'Fulfilled' else 'secondary' }}">
-                                            {{ item.status }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        {% if item.status != 'Fulfilled' %}
-                                        <form action="{{ url_for('users.fulfill_order_item') }}" method="post" class="d-inline">
-                                            <input type="hidden" name="order_item_id" value="{{ item.order_item_id }}">
-                                            <button type="submit" class="btn btn-sm btn-success">Mark Fulfilled</button>
-                                        </form>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
         </div>
     </div>
+    
+    <div class="table-responsive mb-4">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Product Name</th>
+                    <th>Price</th>
+                    <th>Quantity</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in inventory_items %}
+                <tr>
+                    <td>
+                        <span class="product-name" id="name-{{ item.product_id }}">{{ item.product_name }}</span>
+                        <input type="text" class="form-control d-none name-edit" 
+                               id="name-edit-{{ item.product_id }}" 
+                               value="{{ item.product_name }}">
+                    </td>
+                    <td>
+                        <span class="product-price" id="price-{{ item.product_id }}">${{ "%.2f"|format(item.price) }}</span>
+                        <input type="number" step="0.01" min="0.01" 
+                               class="form-control d-none price-edit" 
+                               id="price-edit-{{ item.product_id }}" 
+                               value="{{ item.price }}">
+                    </td>
+                    <td>
+                        <form action="{{ url_for('users.update_inventory_quantity') }}" method="post" class="d-inline">
+                            <input type="hidden" name="product_id" value="{{ item.product_id }}">
+                            <input type="number" name="quantity" value="{{ item.quantity }}" 
+                                   min="0" class="form-control d-inline" style="width: 100px">
+                            <button type="submit" class="btn btn-sm btn-secondary">Update</button>
+                        </form>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-primary edit-btn" 
+                                data-product-id="{{ item.product_id }}">Edit</button>
+                        <button class="btn btn-sm btn-success save-btn d-none" 
+                                data-product-id="{{ item.product_id }}">Save</button>
+                        <button class="btn btn-sm btn-danger cancel-btn d-none" 
+                                data-product-id="{{ item.product_id }}">Cancel</button>
+                        <form action="{{ url_for('users.remove_from_inventory') }}" method="post" class="d-inline">
+                            <input type="hidden" name="product_id" value="{{ item.product_id }}">
+                            <input type="hidden" name="delete_product" value="true">
+                            <button type="submit" class="btn btn-sm btn-danger">Remove</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="mb-4">
+        <a href="{{ url_for('users.create_product') }}" class="btn btn-primary">Add New Product</a>
+    </div>
 </div>
-
-<style>
-  .nav-tabs {
-    border-bottom: 2px solid #6c757d;
-  }
-  
-  .nav-tabs .nav-link {
-    border: none;
-    color: #6c757d;
-    font-weight: 500;
-    padding: 10px 20px;
-    border-radius: 4px 4px 0 0;
-    margin-right: 5px;
-  }
-  
-  .nav-tabs .nav-link.active {
-    color: #007bff;
-    background-color: #fff;
-    border-bottom: 3px solid #000;
-  }
-  
-  .nav-tabs .nav-link:hover:not(.active) {
-    background-color: #f8f9fa;
-    color: #007bff;
-  }
-  
-  .tab-content {
-    padding-top: 20px;
-  }
-  
-  .tab-pane {
-    animation: fadeIn 0.3s ease-in-out;
-  }
-  
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-</style>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Need to bring in to create charts -->
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -334,22 +166,10 @@ document.addEventListener('DOMContentLoaded', function() {
             cancelBtn.classList.add('d-none');
         }
     }
-    
-    const hash = window.location.hash;
-    if (hash) {
-        const tab = document.querySelector(`a[href="${hash}"]`);
-        if (tab) {
-            tab.click();
-        }
-    }
-    
-    $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
-        history.pushState(null, null, $(this).attr('href'));
-    });
 
     if (document.getElementById('quantityChart') && document.getElementById('salesChart')) {
         const productStats = JSON.parse('{{ product_stats|tojson|safe }}');
-        /*pull product stats + create chart using library*/
+        
         if (productStats && productStats.length > 0) {
             const productNames = productStats.map(item => item.product_name);
             const currentQuantities = productStats.map(item => item.current_quantity);
@@ -437,170 +257,5 @@ document.addEventListener('DOMContentLoaded', function() {
                 '<div class="text-center my-5"><em>No sales data available</em></div>');
         }
     }
-
-    /*makes both order charts using same library*/
-    if (document.getElementById('orderStatusChart') && document.getElementById('itemFulfillmentChart')) {
-        const orders = JSON.parse('{{ orders|tojson|safe }}');
-        
-        if (orders && orders.length > 0) {
-
-            const statusCounts = {
-                'Pending': 0,
-                'Partially Fulfilled': 0,
-                'Fulfilled': 0
-            };
-            
-            const itemStatusCounts = {};
-            let totalItems = 0;
-            
-            orders.forEach(order => {
-                if (statusCounts.hasOwnProperty(order.status)) {
-                    statusCounts[order.status]++;
-                }
-                
-                if (order.order_items && order.order_items.length > 0) {
-                    order.order_items.forEach(item => {
-                        const status = item.status || 'Unknown';
-                        if (!itemStatusCounts[status]) {
-                            itemStatusCounts[status] = 0;
-                        }
-                        itemStatusCounts[status] += parseInt(item.quantity);
-                        totalItems += parseInt(item.quantity);
-                    });
-                }
-            });
-            
-            const statuses = Object.keys(statusCounts);
-            const counts = Object.values(statusCounts);
-            const total = counts.reduce((sum, count) => sum + count, 0);
-            
-            const backgroundColors = [
-                'rgba(255, 99, 132, 0.5)', 
-                'rgba(255, 205, 86, 0.5)', 
-                'rgba(75, 192, 192, 0.5)'   
-            ];
-            
-            const borderColors = [
-                'rgb(255, 99, 132)',
-                'rgb(255, 205, 86)',
-                'rgb(75, 192, 192)'
-            ];
-            
-            const orderCtx = document.getElementById('orderStatusChart').getContext('2d');
-            new Chart(orderCtx, {
-                type: 'bar',
-                data: {
-                    labels: statuses,
-                    datasets: [{
-                        label: 'Number of Orders',
-                        data: counts,
-                        backgroundColor: backgroundColors,
-                        borderColor: borderColors,
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    animation: {
-                        duration: 500 
-                    },
-                    plugins: {
-                        title: {
-                            display: true,
-                            text: `Order Status Overview (Total: ${total} orders)`
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    const value = context.raw;
-                                    const percentage = Math.round((value / total) * 100);
-                                    return `${value} orders (${percentage}%)`;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: 'Number of Orders'
-                            },
-                            ticks: {
-                                stepSize: 1
-                            }
-                        }
-                    }
-                }
-            });
-            
-            const itemStatuses = Object.keys(itemStatusCounts);
-            const itemCounts = Object.values(itemStatusCounts);
-            
-            const statusColors = {
-                'Fulfilled': ['rgba(75, 192, 192, 0.5)', 'rgb(75, 192, 192)'],
-                'Processing': ['rgba(255, 205, 86, 0.5)', 'rgb(255, 205, 86)'],
-                'Pending': ['rgba(255, 99, 132, 0.5)', 'rgb(255, 99, 132)'],
-                'Unknown': ['rgba(201, 203, 207, 0.5)', 'rgb(201, 203, 207)']
-            };
-            
-            const itemBackgroundColors = [];
-            const itemBorderColors = [];
-            
-            itemStatuses.forEach(status => {
-                if (statusColors[status]) {
-                    itemBackgroundColors.push(statusColors[status][0]);
-                    itemBorderColors.push(statusColors[status][1]);
-                } else {
-                    itemBackgroundColors.push('rgba(153, 102, 255, 0.5)');
-                    itemBorderColors.push('rgb(153, 102, 255)');
-                }
-            });
-            
-            const itemFulfillmentCtx = document.getElementById('itemFulfillmentChart').getContext('2d');
-            new Chart(itemFulfillmentCtx, {
-                type: 'pie',
-                data: {
-                    labels: itemStatuses,
-                    datasets: [{
-                        data: itemCounts,
-                        backgroundColor: itemBackgroundColors,
-                        borderColor: itemBorderColors,
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    animation: {
-                        duration: 500
-                    },
-                    plugins: {
-                        title: {
-                            display: true,
-                            text: `Item Fulfillment Status (Total: ${totalItems} items)`
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    const value = context.raw;
-                                    const percentage = Math.round((value / totalItems) * 100);
-                                    return `${value} items (${percentage}%)`;
-                                }
-                            }
-                        },
-                        legend: {
-                            position: 'right'
-                        }
-                    }
-                }
-            });
-        } else {
-            document.getElementById('orderStatusChart').innerHTML = 
-                '<div class="text-center my-5"><em>No orders available</em></div>';
-            document.getElementById('itemFulfillmentChart').innerHTML = 
-                '<div class="text-center my-5"><em>No items available</em></div>';
-        }
-    }
 });
 </script>
-{% endblock %}

@@ -84,7 +84,7 @@ def sales():
     search_term = request.args.get('search', '')
     inventory_items = current_user.get_seller_inventory()
     
-    seller_id = User.get_effective_seller_id(current_user.user_id)
+    seller_id = current_user.user_id
     
     seller_orders = User.get_seller_orders(seller_id)
     product_stats = User.get_product_sales_stats(seller_id)
@@ -103,11 +103,19 @@ def sales():
     buyer_data = None
     
     if active_tab == 'analytics':
-        ratings_data = User.get_seller_ratings_distribution(seller_id)
-        
-        top_buyers = User.get_top_buyers(seller_id, limit=5)
-        
-        buyer_data = User.get_buyer_engagement_data(seller_id)
+        try:
+                        
+            ratings_data = User.get_seller_ratings_distribution(seller_id)
+            
+            top_buyers = User.get_top_buyers(seller_id, limit=5)
+            
+            buyer_data = User.get_buyer_engagement_data(seller_id)
+            
+        except Exception as e:
+            print(f"Error in analytics tab: {str(e)}")
+            ratings_data = {'one_star': 0, 'two_star': 0, 'three_star': 0, 'four_star': 0, 'five_star': 0}
+            top_buyers = []
+            buyer_data = []
     
     return render_template('seller_dashboard.html', 
                           active_tab=active_tab,
@@ -332,7 +340,6 @@ def remove_from_inventory():
     
     return redirect(url_for('users.sales', tab='products'))
 
-#get details for buyers
 @bp.route('/get-buyer-details/<int:buyer_id>')
 @login_required
 def get_buyer_details(buyer_id):
@@ -340,50 +347,70 @@ def get_buyer_details(buyer_id):
         return jsonify({'error': 'Unauthorized access'}), 403
     
     try:
+        
+        user = User.get(buyer_id)
+        if not user:
+            return jsonify({'error': 'Buyer not found in the system'}), 404
+            
+        print(f"Found buyer in database: {user.full_name}")
+        
         buyer = User.get_buyer_info(current_user.user_id, buyer_id)
         if not buyer:
-            return jsonify({'error': 'Buyer not found or has no orders with you'}), 404
-            
-        orders = User.get_buyer_orders(current_user.user_id, buyer_id)
+            buyer = {
+                'user_id': user.id,
+                'email': user.email,
+                'full_name': user.full_name,
+                'order_count': 0,
+                'total_spent': 0.0,
+                'last_order_date': None,
+                'avg_rating': None
+            }
         
-        reviews = User.get_buyer_reviews(current_user.user_id, buyer_id)
+        orders = User.get_buyer_orders(current_user.user_id, buyer_id) or []
+        
+        reviews = User.get_buyer_reviews(current_user.user_id, buyer_id) or []
+        
+        messages = User.get_buyer_messages(current_user.user_id, buyer_id) or []
         
         return jsonify({
             'buyer': buyer,
             'orders': orders,
-            'reviews': reviews
+            'reviews': reviews,
+            'messages': messages
         })
         
     except Exception as e:
         print(f"Error getting buyer details: {str(e)}")
-        return jsonify({'error': 'Failed to fetch buyer details'}), 500
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'Failed to fetch buyer details: {str(e)}'}), 500
 
 def get_recent_reviews_by_user_id_from_csv(user_id):
-    reviews = []
-    try:
-        with open('reviews.csv', 'r') as file:
-            reader = csv.DictReader(file)
-            for row in reader:
-                if row['user_id'] == str(user_id):
-                    reviews.append(row)
-    except FileNotFoundError:
-        pass
-    return reviews
+        reviews = []
+        try:
+            with open('reviews.csv', 'r') as file:
+                reader = csv.DictReader(file)
+                for row in reader:
+                    if row['user_id'] == str(user_id):
+                        reviews.append(row)
+        except FileNotFoundError:
+            pass
+        return reviews
 
-class UserReviewSearchForm(FlaskForm):
-    user_id = StringField('User ID', validators=[DataRequired()])
-    submit = SubmitField('Search Reviews')
+    class UserReviewSearchForm(FlaskForm):
+        user_id = StringField('User ID', validators=[DataRequired()])
+        submit = SubmitField('Search Reviews')
 
-class AccountUpdateForm(FlaskForm):
-    email = StringField('Email', validators=[DataRequired(), Email()])
-    full_name = StringField('Full Name', validators=[DataRequired()])
-    address = TextAreaField('Address', validators=[DataRequired()])
-    password = PasswordField('New Password', validators=[Optional()])
-    submit = SubmitField('Update Profile')
-    
-    def validate_email(self, email):
-        if email.data != current_user.email and User.email_exists(email.data):
-            raise ValidationError('Email already in use.')
+    class AccountUpdateForm(FlaskForm):
+        email = StringField('Email', validators=[DataRequired(), Email()])
+        full_name = StringField('Full Name', validators=[DataRequired()])
+        address = TextAreaField('Address', validators=[DataRequired()])
+        password = PasswordField('New Password', validators=[Optional()])
+        submit = SubmitField('Update Profile')
+        
+        def validate_email(self, email):
+            if email.data != current_user.email and User.email_exists(email.data):
+                raise ValidationError('Email already in use.')
 
 @bp.route('/my-account', methods=['GET', 'POST'])
 @login_required

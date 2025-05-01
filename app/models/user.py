@@ -502,6 +502,38 @@ ORDER BY review_date DESC
         Get buyer information for a specific seller
         """
         try:
+            buyer_check = app.db.execute("""
+            SELECT user_id, email, full_name
+            FROM Users
+            WHERE user_id = :buyer_id
+            """, buyer_id=buyer_id)
+            
+            if not buyer_check:
+                print(f"Buyer with ID {buyer_id} not found")
+                return None
+                
+            order_check = app.db.execute("""
+            SELECT COUNT(*)
+            FROM Orders o
+            JOIN Order_Items oi ON o.order_id = oi.order_id
+            WHERE o.buyer_id = :buyer_id AND oi.seller_id = :seller_id
+            """, seller_id=seller_id, buyer_id=buyer_id)
+            
+            has_orders = order_check[0][0] > 0
+            
+            if not has_orders:
+                print(f"Buyer {buyer_id} exists but has no orders from seller {seller_id}")
+                return {
+                    'user_id': buyer_check[0][0],
+                    'email': buyer_check[0][1],
+                    'full_name': buyer_check[0][2],
+                    'order_count': 0,
+                    'total_spent': 0.0,
+                    'last_order_date': None,
+                    'avg_rating': None
+                }
+            
+            # if buyer had order, get full detail of it
             rows = app.db.execute("""
             WITH buyer_data AS (
                 SELECT 
@@ -532,10 +564,12 @@ ORDER BY review_date DESC
                 bd.total_spent,
                 bd.last_order_date,
                 br.avg_rating
-            FROM buyer_data bd, buyer_ratings br
+            FROM buyer_data bd
+            LEFT JOIN buyer_ratings br ON 1=1
             """, seller_id=seller_id, buyer_id=buyer_id)
             
             if not rows:
+                print(f"No data found for buyer {buyer_id} with seller {seller_id}")
                 return None
                 
             return {
@@ -549,6 +583,8 @@ ORDER BY review_date DESC
             }
         except Exception as e:
             print(f"Error getting buyer info: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return None
             
     @staticmethod
@@ -727,8 +763,6 @@ ORDER BY review_date DESC
         including orders, messages, and ratings
         """
         try:
-            effective_seller_id = User.get_effective_seller_id(seller_id)
-            
             rows = app.db.execute("""
             WITH buyer_orders AS (
                 SELECT 
@@ -748,19 +782,18 @@ ORDER BY review_date DESC
                     mt.buyer_id AS user_id,
                     COUNT(m.message_id) AS message_count
                 FROM Message_Threads mt
-                LEFT JOIN Messages m ON m.thread_id = mt.thread_id
+                JOIN Messages m ON m.thread_id = mt.thread_id
                 WHERE mt.seller_id = :seller_id
                 GROUP BY mt.buyer_id
             ),
             buyer_ratings AS (
                 SELECT 
-                    o.buyer_id AS user_id,
+                    pr.user_id,
                     AVG(pr.rating) AS avg_rating
-                FROM Orders o
-                JOIN Order_Items oi ON o.order_id = oi.order_id
-                JOIN Product_Reviews pr ON pr.product_id = oi.product_id AND pr.user_id = o.buyer_id
-                WHERE oi.seller_id = :seller_id
-                GROUP BY o.buyer_id
+                FROM Product_Reviews pr
+                JOIN Products p ON pr.product_id = p.product_id
+                JOIN Seller_Inventory si ON p.product_id = si.product_id AND si.seller_id = :seller_id
+                GROUP BY pr.user_id
             ),
             all_buyers AS (
                 SELECT 
@@ -779,7 +812,7 @@ ORDER BY review_date DESC
             )
             SELECT * FROM all_buyers
             ORDER BY total_orders DESC, last_purchase DESC
-            """, seller_id=effective_seller_id)
+            """, seller_id=seller_id)
             
             return [
                 {
@@ -797,34 +830,48 @@ ORDER BY review_date DESC
             return []
 
     @staticmethod
-    def get_effective_seller_id(user_id):
+    def get_buyer_messages(seller_id, buyer_id):
         """
-        Find the effective seller ID for a user, which may be different from
-        their user ID in some cases due to database inconsistencies.
+        Get message history between a seller and a buyer
         """
         try:
-            rows = app.db.execute("""
-            SELECT DISTINCT seller_id
+            threads = app.db.execute("""
+            SELECT thread_id
             FROM Message_Threads
-            WHERE seller_id = :user_id
-            LIMIT 1
-            """, user_id=user_id)
+            WHERE seller_id = :seller_id AND buyer_id = :buyer_id
+            """, seller_id=seller_id, buyer_id=buyer_id)
             
-            if rows:
-                return rows[0][0]
+            if not threads:
+                return []
                 
-            rows = app.db.execute("""
-            SELECT DISTINCT seller_id
-            FROM Order_Items
-            WHERE seller_id = :user_id
-            LIMIT 1
-            """, user_id=user_id)
-            
-            if rows:
-                return rows[0][0]
+            messages = []
+            for thread in threads:
+                thread_id = thread[0]
+                thread_messages = app.db.execute("""
+                SELECT 
+                    m.message_id,
+                    m.sender_id,
+                    u.full_name AS sender_name,
+                    m.message_text,
+                    m.sent_at
+                FROM Messages m
+                JOIN Users u ON m.sender_id = u.user_id
+                WHERE m.thread_id = :thread_id
+                ORDER BY m.sent_at
+                """, thread_id=thread_id)
                 
-            return user_id
-                
+                for msg in thread_messages:
+                    messages.append({
+                        'message_id': msg[0],
+                        'sender_id': msg[1],
+                        'sender_name': msg[2],
+                        'message_text': msg[3],
+                        'sent_at': msg[4],
+                        'thread_id': thread_id,
+                        'is_seller': msg[1] == seller_id
+                    })
+                    
+            return messages
         except Exception as e:
-            print(f"Error getting effective seller ID: {str(e)}")
-            return user_id
+            print(f"Error getting buyer messages: {str(e)}")
+            return []

@@ -71,6 +71,55 @@
     from { opacity: 0; }
     to { opacity: 1; }
   }
+  .message-history {
+        max-height: 300px;
+        overflow-y: auto;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        background-color: #f9f9f9;
+        margin-bottom: 20px;
+    }
+
+    .message-bubble {
+        margin-bottom: 15px;
+        display: flex;
+    }
+
+    .seller-message {
+        justify-content: flex-end;
+    }
+
+    .buyer-message {
+        justify-content: flex-start;
+    }
+
+    .message-content {
+        max-width: 70%;
+        padding: 10px;
+        border-radius: 10px;
+        position: relative;
+    }
+
+    .seller-message .message-content {
+        background-color: #dcf8c6;
+        margin-left: auto;
+    }
+
+    .buyer-message .message-content {
+        background-color: #f1f0f0;
+        margin-right: auto;
+    }
+
+    .message-content p {
+        margin-bottom: 5px;
+    }
+
+    .message-content small {
+        display: block;
+        text-align: right;
+        font-size: 0.7rem;
+    }
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

@@ -13,7 +13,7 @@
                 </div>
                 <div class="card-body">
                     <div class="alert alert-secondary">
-                        <small>Shows all ratings received for products in your inventory, regardless of which buyer left the rating.</small>
+                        <small>Shows all ratings received for products in your inventory, regardless of if the rating was left directly to your item.</small>
                     </div>
                     <canvas id="ratingsChart"></canvas>
                 </div>
@@ -39,6 +39,7 @@
             <div class="alert alert-secondary mb-3">
                 <small>This table shows only direct interactions with buyers, who either messaged or ordered from you. The "Avg. Rating" column shows ratings that these specific buyers have left for your products.</small>
             </div>
+            {% if buyer_data and buyer_data|length > 0 %}
             <div class="table-responsive">
                 <table class="table table-striped">
                     <thead>
@@ -90,19 +91,28 @@
                                 {% endif %}
                             </td>
                             <td>
-                                <form action="/get-buyer-details/{{ buyer.buyer_id }}" method="GET" class="d-inline">
-                                    <button type="button" class="btn btn-sm btn-outline-primary view-details" data-buyer-id="{{ buyer.buyer_id }}">
-                                        View Details
-                                    </button>
-                                </form>
+                                <button type="button" class="btn btn-sm btn-outline-primary view-details" data-buyer-id="{{ buyer.buyer_id }}">
+                                    View Details
+                                </button>
                             </td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
+            {% else %}
+            <div class="alert alert-warning">
+                <p>No buyer engagement data is available yet. This could be because:</p>
+                <ul>
+                    <li>You don't have any orders yet</li>
+                    <li>You haven't received any messages from buyers</li>
+                    <li>There might be an issue with the data retrieval</li>
+                </ul>
+                <p>As you start making sales and interacting with buyers, this table will populate with data.</p>
+            </div>
+            {% endif %}
         </div>
-    </div>
+    </div>      
 </div>
 
 <div id="ratings-data" style="display: none;">
@@ -325,6 +335,7 @@ function showBuyerDetails(buyerId) {
             const buyer = data.buyer;
             const orders = data.orders;
             const reviews = data.reviews;
+            const messages = data.messages || [];
             
             let html = `
                 <div class="buyer-profile mb-4">
@@ -371,7 +382,39 @@ function showBuyerDetails(buyerId) {
                     </table>
                 </div>
                 
-                <h5>Reviews Given</h5>`;
+                <h5>Message History</h5>`;
+                
+            if (messages && messages.length > 0) {
+                html += `<div class="message-history mb-4">`;
+                let lastDate = null;
+                
+                for (let i = 0; i < messages.length; i++) {
+                    const message = messages[i];
+                    const messageDate = new Date(message.sent_at);
+                    
+                    if (!lastDate || messageDate.toDateString() !== lastDate.toDateString()) {
+                        html += `
+                            <div class="text-center my-3">
+                                <span class="badge bg-secondary">${messageDate.toLocaleDateString()}</span>
+                            </div>`;
+                        lastDate = messageDate;
+                    }
+                    
+                    html += `
+                        <div class="message-bubble ${message.is_seller ? 'seller-message' : 'buyer-message'}">
+                            <div class="message-content">
+                                <p>${message.message_text}</p>
+                                <small class="text-muted">${messageDate.toLocaleTimeString()}</small>
+                            </div>
+                        </div>`;
+                }
+                
+                html += `</div>`;
+            } else {
+                html += `<p>No message history with this buyer.</p>`;
+            }
+            
+            html += `<h5>Reviews Given</h5>`;
                 
             if (reviews && reviews.length > 0) {
                 html += `<div class="reviews-list">`;

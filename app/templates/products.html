@@ -96,7 +96,7 @@
                 {% for product in avail_products %}
                 <div class="col-md-3 mb-4">
                     <div class="card h-100">
-                        <img src="{{ product.image_url or 'https://via.placeholder.com/150' }}" 
+                        <img src="{{ url_for('static', filename=product.category_image) }}" 
                              class="card-img-top" alt="{{ product.name }}"
                              style="height: 150px; object-fit: cover;">
                         <div class="card-body">

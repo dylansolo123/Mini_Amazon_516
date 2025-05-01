@@ -2,6 +2,19 @@ from flask import current_app as app
 from decimal import Decimal
 
 class Product:
+    # Dictionary mapping category names to their image files
+    CATEGORY_IMAGES = {
+        'Beauty': 'css/images/beauty.jpg',
+        'Books': 'css/images/books.jpg',
+        'Clothing': 'css/images/clothing.jpg',
+        'Electronics': 'css/images/electronics.jpeg',
+        'Food': 'css/images/food.jpg',
+        'Garden': 'css/images/garden.jpeg',
+        'Home': 'css/images/home.jpg',
+        'Sports': 'css/images/sports.jpeg',
+        'Toys': 'css/images/toys.jpg'
+    }
+
     def __init__(self, product_id, category_id, name, description, image_url, created_by, created_at):
         self.id = int(product_id)  # Ensure ID is always an integer
         self.category_id = category_id
@@ -20,6 +33,13 @@ class Product:
         self.avg_rating = 0.0
         self.reviews = []
         self.sellers = []
+
+    @property
+    def category_image(self):
+        """Get the appropriate image for this product's category"""
+        if self.category_name:
+            return self.CATEGORY_IMAGES.get(self.category_name, self.image_url)
+        return self.image_url
 
     @staticmethod
     def get(id):
@@ -250,11 +270,12 @@ ORDER BY sr.review_date DESC
 LIMIT 5
 ''', seller_id=seller_obj.seller_id)
 
-                # Get seller's other products
+                # Updated query to include category information for other products
                 seller_obj.other_products = app.db.execute('''
-SELECT p.product_id, p.name, p.image_url, si.price
+SELECT p.product_id, p.name, p.image_url, si.price, pc.category_name
 FROM Products p
 JOIN Seller_Inventory si ON p.product_id = si.product_id
+LEFT JOIN Product_Categories pc ON p.category_id = pc.category_id
 WHERE si.seller_id = :seller_id
 AND p.product_id != :product_id
 AND si.quantity > 0

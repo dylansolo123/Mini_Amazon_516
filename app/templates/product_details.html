@@ -14,7 +14,7 @@
         <div class="card-body">
             <div class="row">
                 <div class="col-md-4">
-                    <img src="{{ product.image_url or 'https://via.placeholder.com/200' }}" 
+                    <img src="{{ url_for('static', filename=product.category_image) }}" 
                          class="img-fluid rounded" alt="{{ product.name }}">
                 </div>
                 <div class="col-md-8">
@@ -206,7 +206,7 @@
                         {% for other_product in seller.other_products %}
                         <div class="col-6 mb-3">
                             <div class="card h-100">
-                                <img src="{{ other_product.image_url or 'https://via.placeholder.com/150' }}" 
+                                <img src="{{ url_for('static', filename=product.CATEGORY_IMAGES.get(other_product.category_name, 'css/images/beauty.jpg')) }}" 
                                      class="card-img-top" alt="{{ other_product.name }}"
                                      style="height: 150px; object-fit: cover;">
                                 <div class="card-body">

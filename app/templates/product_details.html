@@ -96,6 +96,33 @@
                                 {% endfor %}
                             </div>
                             <p class="mt-2">{{ review.review_text }}</p>
+                            <div class="d-flex align-items-center mt-2">
+                                <div class="btn-group mr-2" data-auth="{{ current_user.is_authenticated|tojson }}">
+                                    {% if current_user.is_authenticated %}
+                                    <button class="btn btn-sm btn-outline-primary upvote-btn" data-review-id="{{ review.review_id }}">
+                                        <i class="fas fa-thumbs-up"></i> 
+                                        <span class="vote-count">0</span>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger downvote-btn" data-review-id="{{ review.review_id }}">
+                                        <i class="fas fa-thumbs-down"></i>
+                                        <span class="vote-count">0</span>
+                                    </button>
+                                    {% else %}
+                                    <button class="btn btn-sm btn-outline-secondary" disabled title="Please log in to vote">
+                                        <i class="fas fa-thumbs-up"></i> 
+                                        <span class="vote-count">0</span>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary" disabled title="Please log in to vote">
+                                        <i class="fas fa-thumbs-down"></i>
+                                        <span class="vote-count">0</span>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                                <small class="text-muted">Score: <span class="total-score">0</span></small>
+                                {% if not current_user.is_authenticated %}
+                                <small class="text-muted ml-2">(<a href="{{ url_for('users.login') }}">Login to vote</a>)</small>
+                                {% endif %}
+                            </div>
                         </div>
                         {% endfor %}
                     {% else %}
@@ -188,6 +215,19 @@
                                 {% endfor %}
                             </div>
                             <p class="mt-2 mb-0">{{ review.review_text }}</p>
+                            <div class="d-flex align-items-center mt-2">
+                                <div class="btn-group mr-2">
+                                    <button class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-thumbs-up"></i> 
+                                        <span>0</span>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger">
+                                        <i class="fas fa-thumbs-down"></i>
+                                        <span>0</span>
+                                    </button>
+                                </div>
+                                <small class="text-muted">Score: 0</small>
+                            </div>
                         </div>
                         {% endfor %}
                     </div>
@@ -230,6 +270,101 @@
         </div>
     </div>
 </div>
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if user is logged in (this will be set in the template)
+    const isAuthenticated = document.querySelector('.btn-group').dataset.auth === 'true';
+    
+    // Store user votes in memory
+    const userVotes = {};
+
+    function handleVote(reviewId, button, isUpvote) {
+        // Check if user is logged in
+        if (!isAuthenticated) {
+            window.location.href = "{{ url_for('users.login') }}";
+            return;
+        }
+
+        // Get the vote container and score elements
+        const voteContainer = button.closest('div.d-flex');
+        const scoreSpan = voteContainer.querySelector('.total-score');
+        const currentScore = parseInt(scoreSpan.textContent) || 0;
+        
+        // Get both buttons and their vote counts
+        const upvoteBtn = voteContainer.querySelector('.upvote-btn');
+        const downvoteBtn = voteContainer.querySelector('.downvote-btn');
+        const upvoteCount = upvoteBtn.querySelector('.vote-count');
+        const downvoteCount = downvoteBtn.querySelector('.vote-count');
+
+        // Get current vote state for this review
+        const currentVoteState = userVotes[reviewId];
+        
+        // Remove active state from both buttons
+        upvoteBtn.classList.remove('active');
+        downvoteBtn.classList.remove('active');
+
+        // If clicking the same button that's already voted, remove the vote
+        if (currentVoteState === isUpvote) {
+            // Remove vote
+            userVotes[reviewId] = null;
+            
+            // Update score
+            scoreSpan.textContent = isUpvote ? currentScore - 1 : currentScore + 1;
+            
+            // Update vote count
+            const voteCount = button.querySelector('.vote-count');
+            voteCount.textContent = parseInt(voteCount.textContent) - 1;
+        } else {
+            // First remove the old vote if it exists
+            if (currentVoteState !== null && currentVoteState !== undefined) {
+                // Remove the old vote's effect on score
+                if (currentVoteState === true) { // was upvote
+                    scoreSpan.textContent = currentScore - 1;
+                    upvoteCount.textContent = parseInt(upvoteCount.textContent) - 1;
+                } else if (currentVoteState === false) { // was downvote
+                    scoreSpan.textContent = currentScore + 1;
+                    downvoteCount.textContent = parseInt(downvoteCount.textContent) - 1;
+                }
+            }
+
+            // Add the new vote
+            userVotes[reviewId] = isUpvote;
+            button.classList.add('active');
+            
+            // Update score and count for new vote
+            if (isUpvote) {
+                scoreSpan.textContent = parseInt(scoreSpan.textContent) + 1;
+                upvoteCount.textContent = parseInt(upvoteCount.textContent) + 1;
+            } else {
+                scoreSpan.textContent = parseInt(scoreSpan.textContent) - 1;
+                downvoteCount.textContent = parseInt(downvoteCount.textContent) + 1;
+            }
+        }
+    }
+
+    // Only add event listeners if user is authenticated
+    if (isAuthenticated) {
+        // Add click event listener for upvote buttons
+        document.querySelectorAll('.upvote-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const reviewId = this.getAttribute('data-review-id');
+                handleVote(reviewId, this, true);
+            });
+        });
+
+        // Add click event listener for downvote buttons
+        document.querySelectorAll('.downvote-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const reviewId = this.getAttribute('data-review-id');
+                handleVote(reviewId, this, false);
+            });
+        });
+    }
+});
+</script>
+{% endblock %}
 
 {% block styles %}
 <style>
@@ -284,6 +419,16 @@
 .btn-success:hover {
     background-color: #218838;
     border-color: #1e7e34;
+}
+
+.btn.active {
+    background-color: #007bff;
+    color: white;
+}
+
+.btn-outline-danger.active {
+    background-color: #dc3545;
+    color: white;
 }
 </style>
 {% endblock %}

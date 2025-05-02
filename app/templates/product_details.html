@@ -96,6 +96,19 @@
                                 {% endfor %}
                             </div>
                             <p class="mt-2">{{ review.review_text }}</p>
+                            <div class="d-flex align-items-center mt-2">
+                                <div class="btn-group mr-2">
+                                    <button class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-thumbs-up"></i> 
+                                        <span>0</span>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger">
+                                        <i class="fas fa-thumbs-down"></i>
+                                        <span>0</span>
+                                    </button>
+                                </div>
+                                <small class="text-muted">Score: 0</small>
+                            </div>
                         </div>
                         {% endfor %}
                     {% else %}
@@ -188,6 +201,19 @@
                                 {% endfor %}
                             </div>
                             <p class="mt-2 mb-0">{{ review.review_text }}</p>
+                            <div class="d-flex align-items-center mt-2">
+                                <div class="btn-group mr-2">
+                                    <button class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-thumbs-up"></i> 
+                                        <span>0</span>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger">
+                                        <i class="fas fa-thumbs-down"></i>
+                                        <span>0</span>
+                                    </button>
+                                </div>
+                                <small class="text-muted">Score: 0</small>
+                            </div>
                         </div>
                         {% endfor %}
                     </div>

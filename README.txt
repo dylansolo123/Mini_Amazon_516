@@ -128,10 +128,6 @@ app/templates/sales.html: matched base.html template for same look throughout
 
 
 
-Final Project:
+Final Project Demo Video:
 
-Eddie - Carts Guru:
-app/cart.py - Added checkout and checkout_page routes for cart and order operations.
-app/models/cart.py - Updated Cart model to support checkout logic.
-app/templates/checkout.html - New template for cart item review and order placement.
-app/templates/purchase_failed.html - New template to handle insufficient funds during checkout.
+https://www.youtube.com/watch?v=TIIwlA4mls4

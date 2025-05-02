@@ -20,10 +20,11 @@
     </div>
     
     <div class="mb-3">
-        <form class="form-inline" method="get">
+        <form class="form-inline" method="get" action="{{ url_for('users.sales') }}">
+            <input type="hidden" name="tab" value="orders">
             <div class="input-group">
                 <input type="text" class="form-control" name="search" 
-                       placeholder="Search orders..." value="{{ request.args.get('search', '') }}">
+                      placeholder="Search orders..." value="{{ request.args.get('search', '') }}">
                 <div class="input-group-append">
                     <button class="btn btn-outline-secondary" type="submit">Search</button>
                 </div>

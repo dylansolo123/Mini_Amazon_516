@@ -98,16 +98,16 @@
                             <p class="mt-2">{{ review.review_text }}</p>
                             <div class="d-flex align-items-center mt-2">
                                 <div class="btn-group mr-2">
-                                    <button class="btn btn-sm btn-outline-primary">
+                                    <button class="btn btn-sm btn-outline-primary upvote-btn" data-review-id="{{ review.review_id }}">
                                         <i class="fas fa-thumbs-up"></i> 
-                                        <span>0</span>
+                                        <span class="vote-count">0</span>
                                     </button>
-                                    <button class="btn btn-sm btn-outline-danger">
+                                    <button class="btn btn-sm btn-outline-danger downvote-btn" data-review-id="{{ review.review_id }}">
                                         <i class="fas fa-thumbs-down"></i>
-                                        <span>0</span>
+                                        <span class="vote-count">0</span>
                                     </button>
                                 </div>
-                                <small class="text-muted">Score: 0</small>
+                                <small class="text-muted">Score: <span class="total-score">0</span></small>
                             </div>
                         </div>
                         {% endfor %}
@@ -256,6 +256,46 @@
         </div>
     </div>
 </div>
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add click event listener for upvote buttons
+    document.querySelectorAll('.upvote-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const reviewId = this.getAttribute('data-review-id');
+            const scoreSpan = this.closest('div.d-flex').querySelector('.total-score');
+            const currentScore = parseInt(scoreSpan.textContent) || 0;
+            
+            // Update the score immediately in the UI
+            scoreSpan.textContent = currentScore + 1;
+            
+            // Update the upvote count
+            const voteCount = this.querySelector('.vote-count');
+            const currentVotes = parseInt(voteCount.textContent) || 0;
+            voteCount.textContent = currentVotes + 1;
+        });
+    });
+
+    // Add click event listener for downvote buttons
+    document.querySelectorAll('.downvote-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const reviewId = this.getAttribute('data-review-id');
+            const scoreSpan = this.closest('div.d-flex').querySelector('.total-score');
+            const currentScore = parseInt(scoreSpan.textContent) || 0;
+            
+            // Update the score immediately in the UI
+            scoreSpan.textContent = currentScore - 1;
+            
+            // Update the downvote count
+            const voteCount = this.querySelector('.vote-count');
+            const currentVotes = parseInt(voteCount.textContent) || 0;
+            voteCount.textContent = currentVotes + 1;
+        });
+    });
+});
+</script>
+{% endblock %}
 
 {% block styles %}
 <style>
